@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#09090b">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135679.png">
+    
+    <title>MoneyWise | Secured Wealth Tracker</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="login-logo"><i class="fa-solid fa-wallet" style="color:white"></i></div>
+        <h2>MoneyWise</h2>
+        <div class="spinner"></div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="login-overlay" id="loginScreen" style="display: none;">
+        <div class="login-box">
+            <div class="login-logo"><i class="fa-solid fa-shield-halved" style="color:white"></i></div>
+            <h2 style="margin-bottom: 5px;">Welcome Back</h2>
+            <p class="text-muted" style="margin-bottom: 2rem;">AES-256 Encrypted Storage</p>
+            
+            <form id="login-form">
+                <div class="form-group text-left">
+                    <label>Username</label>
+                    <input type="text" id="loginUser" class="form-input" placeholder="admin" required>
+                </div>
+                <div class="form-group text-left">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" class="form-input" placeholder="admin123" required>
+                </div>
+                <div class="form-group text-left">
+                    <label>Family Encryption Key</label>
+                    <input type="password" id="loginKey" class="form-input" placeholder="Your secret passphrase" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
+                    <i class="fa-solid fa-lock-open"></i> Decrypt & Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App Shell -->
+    <div class="app-container" id="appMain" style="display: none;">
+        
+        <!-- Sidebar (Desktop) -->
+        <nav class="sidebar">
+            <div class="brand">
+                <div class="icon"><i class="fa-solid fa-wallet" style="color:white"></i></div>
+                <h2>MoneyWise</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="active" data-view="dashboard"><a><i class="fa-solid fa-house"></i> Monthly Home</a></li>
+                <li data-view="wealth"><a><i class="fa-solid fa-sack-dollar"></i> Net Worth</a></li>
+                <li data-view="transactions"><a><i class="fa-solid fa-money-bill-transfer"></i> Transactions</a></li>
+                <li data-view="assets"><a><i class="fa-solid fa-chart-pie"></i> Portfolio & Chitti</a></li>
+                <li data-view="budget"><a><i class="fa-solid fa-bullseye"></i> Budgets</a></li>
+                <li data-view="settings"><a><i class="fa-solid fa-gear"></i> Settings</a></li>
+            </ul>
+            <div class="user-card">
+                <div class="avatar"><i class="fa-solid fa-user" style="color:white"></i></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 0.95rem;" id="current-user">User</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);" id="sync-status">Online</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-area">
+            <header class="top-bar">
+                <h1 id="page-title">Monthly Home</h1>
+                <div class="top-actions">
+                    <button class="btn-icon-small" id="sync-btn" title="Sync with GitHub"><i class="fa-solid fa-rotate"></i></button>
+                    <button class="btn btn-primary" id="add-new-btn-desk" style="padding: 10px 16px; border-radius: 20px;">
+                        <i class="fa-solid fa-plus"></i> Quick Entry
+                    </button>
+                </div>
+            </header>
+
+            <!-- Views -->
+            <div class="views-container">
+                
+                <!-- 1. DASHBOARD (Monthly Only) -->
+                <section id="view-dashboard" class="view active">
+                    <div class="flex-between" style="margin-bottom: 1.2rem;">
+                        <h2 id="dash-month-year" class="text-muted" style="font-size: 1.15rem; font-weight: 500;"></h2>
+                        <span id="dash-local-time" class="text-muted" style="font-size: 0.82rem;"></span>
+                    </div>
+                    <div class="dash-grid">
+                        <div class="card">
+                            <div class="stat-label flex-between">This Month Income <i class="fa-solid fa-arrow-trend-up text-success"></i></div>
+                            <div class="stat-value text-success" id="dash-income">₹0.00</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label flex-between">This Month Expense <i class="fa-solid fa-arrow-trend-down text-danger"></i></div>
+                            <div class="stat-value text-danger" id="dash-expense">₹0.00</div>
+                        </div>
+                        <div class="card card-primary">
+                            <div class="stat-label flex-between">Monthly Savings <i class="fa-solid fa-piggy-bank"></i></div>
+                            <div class="stat-value" id="dash-savings">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+                        <h3 style="font-size: 1.1rem; margin-bottom: 10px;"><i class="fa-solid fa-lightbulb" style="color: var(--warning)"></i> AI Budget Insights</h3>
+                        <div id="ai-suggestions" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary);">
+                            Analyzing this month's finances...
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="card">
+                            <h3 class="chart-title">Expense Breakdown (Monthly)</h3>
+                            <div class="chart-box"><canvas id="cExpensePie"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="chart-title">Income Sources (Monthly)</h3>
+                            <div class="chart-box"><canvas id="cIncomePie"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title">Month-over-Month Expense Comparison</h3>
+                        <div class="chart-box"><canvas id="cMoM"></canvas></div>
+                    </div>
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3 class="chart-title">Yearly Trend — Income vs Expense vs Savings</h3>
+                        <div class="chart-box"><canvas id="cYearlyTrend"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- 2. WEALTH / NET WORTH -->
+                <section id="view-wealth" class="view">
+                    <div class="card card-primary" style="margin-bottom: 2rem; padding: 2.5rem; text-align: center;">
+                        <div style="font-size: 1.2rem; margin-bottom: 10px; color:rgba(255,255,255,0.8)">Total Family Net Worth</div>
+                        <div style="font-size: 3.5rem; font-weight: 700; font-family: 'Outfit';" id="wealth-net-worth">₹0.00</div>
+                    </div>
+
+                    <div class="dash-grid">
+                        <div class="card">
+                            <div class="stat-label">Total Bank Balances</div>
+                            <div class="stat-value text-primary" id="wealth-banks">₹0.00</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label">Total Invested Assets</div>
+                            <div class="stat-value text-success" id="wealth-assets">₹0.00</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label">Total Liabilities / Loans</div>
+                            <div class="stat-value text-danger" id="wealth-liabilities">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="card">
+                            <h3 class="chart-title">Net Worth Trend (6 Months)</h3>
+                            <div class="chart-box"><canvas id="cNetWorthTrend"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="chart-title">Wealth by Ownership</h3>
+                            <div class="chart-box"><canvas id="cWealthOwner"></canvas></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. TRANSACTIONS -->
+                <section id="view-transactions" class="view">
+                    <div class="card">
+                        <div class="flex-between" style="margin-bottom: 1.5rem; gap: 10px; flex-wrap: wrap;">
+                            <h3>Transaction History</h3>
+                            <div style="display:flex; gap: 10px;">
+                                <select class="form-input" style="width: auto;" id="tx-cat-filter">
+                                    <option value="all">All Categories</option>
+                                </select>
+                                <select class="form-input" style="width: auto;" id="tx-filter">
+                                    <option value="month">This Month</option>
+                                    <option value="2months">Last 2 Months</option>
+                                    <option value="6months">Last 6 Months</option>
+                                    <option value="year">This Year</option>
+                                    <option value="all">All Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="transactions-list"></div>
+                    </div>
+                </section>
+
+                <!-- 4. PORTFOLIO & CHITTI -->
+                <section id="view-assets" class="view">
+                    
+                    <div class="chart-grid" style="margin-bottom: 2rem;">
+                        <div class="card">
+                            <h3 class="chart-title">Portfolio Allocation</h3>
+                            <div class="chart-box"><canvas id="cPortfolioAssets"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="chart-title">Loan Payment Progress vs Expected</h3>
+                            <div class="chart-box"><canvas id="cLoanPaymentActual"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Bank Accounts -->
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h3>Bank Accounts</h3>
+                            <button class="btn-icon-small" onclick="App.openModal('modal-bank')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="bank-list"></div>
+                    </div>
+
+                    <!-- Investments -->
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h3>Market Investments & FDs</h3>
+                            <button class="btn-icon-small" onclick="App.openModal('modal-asset')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="assets-list"></div>
+                    </div>
+
+                    <!-- KSFE Chitti -->
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h3>KSFE Chitti Tracker</h3>
+                            <button class="btn-icon-small" onclick="App.openModal('modal-chitti')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="chitti-list"></div>
+                    </div>
+                    
+                    <!-- Loans -->
+                    <div class="card">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h3>Active Loans</h3>
+                            <button class="btn-icon-small" onclick="App.openModal('modal-loan')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="liabilities-list"></div>
+                    </div>
+                </section>
+
+                <!-- 5. BUDGETS -->
+                <section id="view-budget" class="view">
+                    <div class="tabs-wrapper" style="margin-bottom: 1.2rem; max-width: 300px;">
+                        <div class="tab active" id="budget-tab-monthly" onclick="App.setBudgetView('monthly')">Monthly</div>
+                        <div class="tab" id="budget-tab-yearly" onclick="App.setBudgetView('yearly')">Yearly</div>
+                    </div>
+                    <!-- Advanced Budget Analysis -->
+                    <div class="dash-grid" id="budget-summary-grid">
+                        <div class="card">
+                            <div class="stat-label">Total Allocated Budget</div>
+                            <div class="stat-value text-primary" id="budget-total-allocated">₹0.00</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label">Total Spent vs Budget</div>
+                            <div class="stat-value text-warning" id="budget-total-spent">₹0.00</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label">Remaining Safe to Spend</div>
+                            <div class="stat-value text-success" id="budget-total-remaining">₹0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid" style="margin-bottom: 2rem;">
+                        <div class="card">
+                            <h3 class="chart-title">Budget vs Actual (Radar)</h3>
+                            <div class="chart-box" style="height: 350px;"><canvas id="cBudgetRadar"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="chart-title">Budget Trend (Bar)</h3>
+                            <div class="chart-box" style="height: 350px;"><canvas id="cBudgetTrend"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h3>Category Budgets</h3>
+                            <button class="btn-icon-small" onclick="App.openModal('modal-budget')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div id="budget-list"></div>
+                    </div>
+                </section>
+
+                <!-- 6. SETTINGS -->
+                <section id="view-settings" class="view">
+                    <div class="chart-grid">
+                        <div class="card">
+                            <h3 style="margin-bottom: 1.5rem;">Sync & Security</h3>
+                            <form id="settings-form">
+                                <div class="form-group">
+                                    <label>GitHub Personal Access Token (PAT)</label>
+                                    <input type="password" id="gh-token" class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                </div>
+                                <div class="form-group">
+                                    <label>GitHub Username</label>
+                                    <input type="text" id="gh-username" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Repository Name</label>
+                                    <input type="text" id="gh-repo" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data File Path</label>
+                                    <input type="text" id="gh-path" class="form-input" value="MoneyWise/data.enc">
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Settings</button>
+                            </form>
+                            
+                            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+                            <h3 style="margin-bottom: 1rem;">Change My Password</h3>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <input type="password" id="change-old-pass" class="form-input" placeholder="Current Password" style="flex:1; min-width: 120px;">
+                                <input type="password" id="change-new-pass" class="form-input" placeholder="New Password (min 6 chars)" style="flex:1; min-width: 120px;">
+                                <button class="btn btn-secondary" id="change-pass-btn" style="width:auto;">Update</button>
+                            </div>
+                            
+                            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+                            <button class="btn btn-secondary" id="logout-btn" style="margin-top: 0;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 style="margin-bottom: 1.5rem;">Payment Methods</h3>
+                            <div style="display:flex; gap:10px; margin-bottom: 1rem;">
+                                <input type="text" id="new-pm-input" class="form-input" placeholder="e.g. Spouse HDFC Card">
+                                <button class="btn btn-secondary" id="add-pm-btn" style="width: auto;">Add</button>
+                            </div>
+                            <div class="chips-container" id="custom-pm-list" style="margin-bottom: 2rem;"></div>
+                            
+                            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+                            
+                            <h3 style="margin-bottom: 1.5rem;">Data Export & Reports</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
+                                <button class="btn btn-success" id="export-excel-btn" style="background:#10b981; color:white;"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+                                <button class="btn btn-danger" id="export-pdf-btn" style="background:#ef4444; color:white;"><i class="fa-solid fa-file-pdf"></i> Export PDF Report</button>
+                            </div>
+                            
+                            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+
+                            <h3 style="margin-bottom: 1.5rem;">Manage Categories</h3>
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 2rem;">
+                                <div style="display:flex; gap:10px;">
+                                    <select id="settings-cat-type" class="form-input" style="width:120px;">
+                                        <option value="expense">Expense</option>
+                                        <option value="income">Income</option>
+                                    </select>
+                                    <input type="text" id="new-major-cat" class="form-input" placeholder="New Major Category">
+                                    <button class="btn btn-secondary" id="add-major-cat-btn" style="width: auto;">Add</button>
+                                </div>
+                                <div style="display:flex; gap:10px;">
+                                    <select id="settings-major-sel" class="form-input"></select>
+                                    <input type="text" id="new-minor-cat" class="form-input" placeholder="New Minor Category">
+                                    <button class="btn btn-secondary" id="add-minor-cat-btn" style="width: auto;">Add</button>
+                                </div>
+                            </div>
+                            
+                            <hr style="border-color: var(--border-color); margin: 2rem 0;">
+                            
+                            <h3 style="margin-bottom: 1.5rem;">Family Members</h3>
+                            <p style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 1rem;">Add family members. They can login with their name (lowercase, no spaces) and the password you set here.</p>
+                            <div style="display:flex; gap:8px; margin-bottom: 1rem; flex-wrap: wrap;">
+                                <input type="text" id="new-member-name" class="form-input" placeholder="Display Name" style="flex:1; min-width:100px;">
+                                <input type="password" id="new-member-pass" class="form-input" placeholder="Password" style="flex:1; min-width:100px;">
+                                <select id="new-member-role" class="form-input" style="width: 100px;">
+                                    <option value="admin">Admin</option>
+                                    <option value="editor" selected>Editor</option>
+                                </select>
+                                <button class="btn btn-secondary" id="add-member-btn" style="width: auto;">Add</button>
+                            </div>
+                            <ul id="member-list" style="list-style: none;"></ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        
+        <button class="fab-btn" id="fab-add"><i class="fa-solid fa-plus"></i></button>
+
+        <nav class="bottom-nav">
+            <a class="b-nav-item active" data-view="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></a>
+            <a class="b-nav-item" data-view="wealth"><i class="fa-solid fa-sack-dollar"></i><span>Wealth</span></a>
+            <a class="b-nav-item" data-view="transactions"><i class="fa-solid fa-money-bill-transfer"></i><span>Txns</span></a>
+            <a class="b-nav-item" data-view="assets"><i class="fa-solid fa-chart-pie"></i><span>Portfolio</span></a>
+            <a class="b-nav-item" data-view="budget"><i class="fa-solid fa-bullseye"></i><span>Budget</span></a>
+            <a class="b-nav-item" data-view="settings"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+        </nav>
+    </div>
+
+    <!-- MODAL: ADD RECORD (Intelligent Transaction Entry) -->
+    <div class="modal-backdrop" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Record</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('add-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="tabs-wrapper" id="record-tabs">
+                <div class="tab active" data-tab="expense">Expense</div>
+                <div class="tab" data-tab="income">Income</div>
+                <div class="tab" data-tab="transfer">Transfer/CC</div>
+                <div class="tab" data-tab="investment">Inv. SIP</div>
+                <div class="tab" data-tab="emi">EMI Pay</div>
+            </div>
+            <form id="entry-form">
+                <input type="hidden" id="entry-type" value="expense">
+                
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="entry-amount" class="form-input" style="font-size: 1.5rem; font-weight: 700; height: 60px;" placeholder="0" required>
+                </div>
+                
+                <!-- Major & Minor Category -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;" id="group-category">
+                    <div class="form-group">
+                        <label>Major Category <span style="float:right; font-size:0.75rem; color:var(--primary); cursor:pointer;" onclick="App.promptMajorCat()">+</span></label>
+                        <select id="entry-major-cat" class="form-input"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Minor Category <span style="float:right; font-size:0.75rem; color:var(--primary); cursor:pointer;" onclick="App.promptMinorCat()">+</span></label>
+                        <select id="entry-minor-cat" class="form-input"></select>
+                    </div>
+                </div>
+
+                <!-- Target Asset / Loan / Chitti -->
+                <div class="form-group" id="group-target" style="display:none;">
+                    <label id="lbl-target">Select Target</label>
+                    <select id="entry-target" class="form-input"></select>
+                </div>
+                
+                <div class="form-group" id="group-pm">
+                    <label>Payment Method (From/To)</label>
+                    <select id="entry-pm" class="form-input"></select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="entry-date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Who Paid</label>
+                        <select id="entry-who" class="form-input" required></select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="entry-desc" class="form-input" placeholder="Optional description...">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Record</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD ASSET -->
+    <div class="modal-backdrop" id="modal-asset">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Investment</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-asset')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="asset-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="asset-type" class="form-input" onchange="App.toggleAssetFields()">
+                            <option value="Mutual Fund">Mutual Fund</option>
+                            <option value="Shares">Shares / Stocks</option>
+                            <option value="Fixed Deposit">Fixed Deposit (FD)</option>
+                            <option value="Bond">Bond</option>
+                            <option value="PF">Provident Fund (PF/EPF)</option>
+                            <option value="NPS">National Pension System (NPS)</option>
+                            <option value="PPF">Public Provident Fund (PPF)</option>
+                            <option value="Gold">Gold / Jewelry</option>
+                            <option value="Real Estate">Real Estate</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ownership</label>
+                        <select id="asset-owner" class="form-input global-owner-sel"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Name / Symbol</label>
+                    <input type="text" id="asset-name" class="form-input" required placeholder="e.g. HDFC Flexi Cap or SBI FD">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Total Invested (₹)</label>
+                        <input type="number" id="asset-invested" class="form-input" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Value (₹)</label>
+                        <input type="number" id="asset-current" class="form-input" value="0" required>
+                    </div>
+                </div>
+                
+                <!-- Fixed Income / Savings Specific Fields -->
+                <div id="asset-fixed-fields" style="display:none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <h4 style="margin-bottom: 10px; color: var(--text-secondary); font-size: 0.85rem;">Detailed Tracking</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Invested / Start Date</label>
+                            <input type="date" id="asset-date" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Interest Rate (% p.a.)</label>
+                            <input type="number" step="0.01" id="asset-rate" class="form-input" placeholder="7.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Maturity Period (Months)</label>
+                            <input type="number" id="asset-months" class="form-input" placeholder="60">
+                        </div>
+                        <div class="form-group">
+                            <label>Expected Maturity Value (₹)</label>
+                            <input type="number" id="asset-maturity-value" class="form-input" placeholder="Auto-calculated or enter">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Create Portfolio Item</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD CHITTI -->
+    <div class="modal-backdrop" id="modal-chitti">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New KSFE Chitti</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-chitti')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="chitti-form">
+                <div class="form-group">
+                    <label>Chitti Name / ID</label>
+                    <input type="text" id="chitti-name" class="form-input" required placeholder="e.g. KSFE 5Lakh Chitti">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Total Value (Sala) ₹</label>
+                        <input type="number" id="chitti-sala" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Installments (Months)</label>
+                        <input type="number" id="chitti-months" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ownership</label>
+                        <select id="chitti-owner" class="form-input global-owner-sel" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="chitti-status" class="form-input">
+                            <option value="Non-Prized">Non-Prized</option>
+                            <option value="Prized">Prized</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Create Chitti Record</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD BANK -->
+    <div class="modal-backdrop" id="modal-bank">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Bank Account</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-bank')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="bank-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Bank Name</label>
+                        <input type="text" id="bank-name" class="form-input" required placeholder="e.g. SBI Savings">
+                    </div>
+                    <div class="form-group">
+                        <label>Ownership</label>
+                        <select id="bank-owner" class="form-input global-owner-sel" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Current Balance (₹)</label>
+                    <input type="number" id="bank-balance" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Bank Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD LOAN -->
+    <div class="modal-backdrop" id="modal-loan">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Liability</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-loan')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="loan-form">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Loan Type</label>
+                        <select id="loan-type" class="form-input">
+                            <option value="Home Loan">Home Loan</option>
+                            <option value="Personal Loan">Personal Loan</option>
+                            <option value="Gold Loan">Gold Loan</option>
+                            <option value="Car Loan">Car Loan</option>
+                            <option value="Education Loan">Education Loan</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ownership</label>
+                        <select id="loan-owner" class="form-input global-owner-sel"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Bank / Lender</label>
+                    <input type="text" id="loan-name" class="form-input" required placeholder="SBI Home Loan">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Total Principal Loan Amount (₹)</label>
+                        <input type="number" id="loan-amount" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Remaining Principal Balance (₹)</label>
+                        <input type="number" id="loan-balance" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Monthly EMI (₹)</label>
+                        <input type="number" id="loan-emi" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Interest Rate (% p.a.)</label>
+                        <input type="number" step="0.01" id="loan-rate" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Loan Start Date</label>
+                        <input type="date" id="loan-start-date" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Tenure (Months)</label>
+                        <input type="number" id="loan-tenure" class="form-input" placeholder="240">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Liability</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD BUDGET -->
+    <div class="modal-backdrop" id="modal-budget">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Set Budget</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-budget')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="budget-form">
+                <div class="form-group">
+                    <label>Major Category</label>
+                    <select id="budget-major" class="form-input" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Minor Category (Optional)</label>
+                    <select id="budget-minor" class="form-input">
+                        <option value="All">All Sub-Categories</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Limit (₹)</label>
+                    <input type="number" id="budget-amount" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Budget</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/api.js"></script>
+    <script src="./js/analytics.js"></script>
+    <script src="./js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    </script>
+</body>
+</html>
