@@ -51,67 +51,110 @@ const App = {
         this.bindSettings();
 
         const savedUser = localStorage.getItem('mw_current_user');
-        if (savedUser && GitHubAPI.isConfigured()) {
+        const rememberedKey = localStorage.getItem('mw_enc_key');
+        if (savedUser && GitHubAPI.isConfigured() && rememberedKey) {
             this.currentUser = JSON.parse(savedUser);
+            GitHubAPI.setEncryptionKey(rememberedKey);
             try {
                 await this.syncData(true);
-                this.setupApp();
+                const freshUser = this.data.users.find(u => u.id === this.currentUser.id);
+                if (freshUser) { this.currentUser = freshUser; localStorage.setItem('mw_current_user', JSON.stringify(freshUser)); this.setupApp(); }
+                else { this.showLogin(); }
             } catch (e) { this.showLogin(); }
         } else { this.showLogin(); }
     },
 
     showLogin() {
-        setTimeout(() => {
-            const spl = document.getElementById('splash-screen');
-            if(spl) spl.style.opacity = '0';
-            setTimeout(() => {
-                if(spl) spl.style.display = 'none';
-                document.getElementById('loginScreen').style.display = 'flex';
-            }, 500);
-        }, 800);
+        const spl = document.getElementById('splash-screen');
+        if(spl) { spl.style.opacity = '0'; setTimeout(() => { spl.style.display = 'none'; }, 400); }
+        const ls = document.getElementById('loginScreen');
+        ls.style.display = 'flex';
+        // Pre-fill saved GitHub config
+        document.getElementById('loginToken').value = GitHubAPI.config.token || '';
+        document.getElementById('loginGhUser').value = GitHubAPI.config.username || '';
+        document.getElementById('loginGhRepo').value = GitHubAPI.config.repo || '';
+        const sf = document.getElementById('setup-fields');
+        const ss = document.getElementById('setup-status');
+        if (GitHubAPI.isConfigured()) {
+            sf.style.display = 'none'; ss.innerText = 'Connected'; ss.style.background = 'var(--success-bg)'; ss.style.color = 'var(--success)';
+        }
+        const rk = localStorage.getItem('mw_enc_key');
+        if (rk) { document.getElementById('loginKey').value = rk; document.getElementById('loginRememberKey').checked = true; }
+    },
+
+    showLoginError(msg) {
+        const el = document.getElementById('login-error');
+        el.innerText = msg; el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 6000);
     },
 
     bindLogin() {
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const u = document.getElementById('loginUser').value.trim();
+            document.getElementById('login-error').style.display = 'none';
+
+            // Save GitHub config from login screen fields
+            const token = document.getElementById('loginToken').value.trim();
+            const ghUser = document.getElementById('loginGhUser').value.trim();
+            const ghRepo = document.getElementById('loginGhRepo').value.trim();
+            if (token && ghUser && ghRepo) GitHubAPI.saveConfig(token, ghUser, ghRepo, 'MoneyWise/data.enc');
+
+            if (!GitHubAPI.isConfigured()) { this.showLoginError('GitHub connection required. Expand the GitHub section and fill in your details.'); return; }
+
+            const u = document.getElementById('loginUser').value.trim().toLowerCase();
             const p = document.getElementById('loginPass').value;
             const key = document.getElementById('loginKey').value;
+            const rememberKey = document.getElementById('loginRememberKey').checked;
+            if (!u || !p || !key) { this.showLoginError('All fields are required.'); return; }
 
             GitHubAPI.setEncryptionKey(key);
-            const btn = e.target.querySelector('button');
-            btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div> Decrypting...';
+            if (rememberKey) localStorage.setItem('mw_enc_key', key); else localStorage.removeItem('mw_enc_key');
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></div> Connecting...';
             btn.disabled = true;
 
             try {
                 let remoteData = await GitHubAPI.fetchData();
-                const user = remoteData.users.find(x => x.id === u.toLowerCase());
+                if (remoteData === null) {
+                    // First-time setup: data.enc doesn't exist yet
+                    if (u === 'admin' && p === 'admin123') {
+                        this.data = GitHubAPI.getDefaultData();
+                        this.currentUser = this.data.users[0];
+                        localStorage.setItem('mw_current_user', JSON.stringify(this.currentUser));
+                        await GitHubAPI.pushData(this.data);
+                        toast('Initial setup complete! Data saved to GitHub.');
+                        this.setupApp(); this.switchView('settings'); return;
+                    } else { this.showLoginError('No data found on GitHub. First-time setup requires admin / admin123.'); btn.innerHTML = orig; btn.disabled = false; return; }
+                }
+                const user = remoteData.users.find(x => x.id === u);
                 if (user && user.pass === p) {
                     this.currentUser = user;
                     localStorage.setItem('mw_current_user', JSON.stringify(user));
                     this.data = remoteData;
                     this.setupApp();
-                } else {
-                    toast('Invalid Username or Password!', 'error');
-                    btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> Decrypt & Login';
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> Decrypt & Login';
-                btn.disabled = false;
-                if (!GitHubAPI.config.token) {
-                    if (u === 'admin' && p === 'admin123') {
-                        this.currentUser = { id: 'admin', name: 'Admin', role: 'admin' };
-                        this.data = GitHubAPI.getDefaultData();
-                        this.setupApp();
-                        this.switchView('settings');
-                    } else { toast('API not configured. Use admin / admin123 to setup.', 'error'); }
-                } else { toast('Error: ' + err.message, 'error'); }
-            }
+                } else { this.showLoginError('Invalid username or password.'); btn.innerHTML = orig; btn.disabled = false; }
+            } catch (err) { this.showLoginError(err.message); btn.innerHTML = orig; btn.disabled = false; }
         });
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            if(confirm('Logout?')) { localStorage.removeItem('mw_current_user'); location.reload(); }
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.addEventListener('click', () => {
+            if (logoutBtn.dataset.confirmLogout === 'true') {
+                localStorage.removeItem('mw_current_user');
+                localStorage.removeItem('mw_enc_key');
+                location.reload();
+            } else {
+                logoutBtn.dataset.confirmLogout = 'true';
+                logoutBtn.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Tap again to confirm logout';
+                logoutBtn.style.background = 'var(--danger-bg)';
+                logoutBtn.style.color = 'var(--danger)';
+                setTimeout(() => {
+                    logoutBtn.dataset.confirmLogout = 'false';
+                    logoutBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout';
+                    logoutBtn.style.background = ''; logoutBtn.style.color = '';
+                }, 3000);
+            }
         });
     },
 
@@ -126,8 +169,7 @@ const App = {
         document.getElementById('gh-repo').value = GitHubAPI.config.repo;
         document.getElementById('gh-path').value = GitHubAPI.config.path;
 
-        const dateOptions = { month: 'long', year: 'numeric' };
-        document.getElementById('dash-month-year').innerText = new Date().toLocaleDateString('en-IN', dateOptions);
+        document.getElementById('dash-month-year').innerText = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
         
         const updateTime = () => {
             const el = document.getElementById('dash-local-time');
@@ -622,18 +664,36 @@ const App = {
         Analytics.saveNetWorthSnapshot(this.data);
         this.renderAll();
         this.setSyncStatus('Saving...', 'warning');
-        try { await GitHubAPI.pushData(this.data); this.setSyncStatus('Synced', 'online'); } catch (err) { this.setSyncStatus('Failed', 'offline'); console.error(err); }
+        try {
+            await GitHubAPI.pushData(this.data);
+            this.setSyncStatus('Synced', 'online');
+        } catch (err) {
+            this.setSyncStatus('Failed', 'offline');
+            toast('Sync failed: ' + err.message, 'error');
+            console.error('Sync error:', err);
+        }
     },
 
     async syncData(silent = false) {
-        if (!GitHubAPI.isConfigured()) return;
+        if (!GitHubAPI.isConfigured() || !GitHubAPI.hasEncryptionKey()) {
+            if (!silent) toast('Not configured', 'error');
+            throw new Error('Not configured');
+        }
         if(!silent) this.setSyncStatus('Syncing...', 'warning');
         try {
             const remoteData = await GitHubAPI.fetchData();
-            this.data = remoteData || GitHubAPI.getDefaultData();
+            if (remoteData === null) {
+                this.data = GitHubAPI.getDefaultData();
+            } else {
+                this.data = remoteData;
+            }
             this.renderAll();
             this.setSyncStatus('Synced', 'online');
-        } catch (error) { this.setSyncStatus('Offline', 'offline'); if(!silent) throw error; }
+        } catch (error) {
+            this.setSyncStatus('Offline', 'offline');
+            if (!silent) toast('Sync failed: ' + error.message, 'error');
+            throw error;
+        }
     },
 
     setSyncStatus(msg, statusClass) {

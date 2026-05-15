@@ -30,9 +30,35 @@
     <div class="login-overlay" id="loginScreen" style="display: none;">
         <div class="login-box">
             <div class="login-logo"><i class="fa-solid fa-shield-halved" style="color:white"></i></div>
-            <h2 style="margin-bottom: 5px;">Welcome Back</h2>
-            <p class="text-muted" style="margin-bottom: 2rem;">AES-256 Encrypted Storage</p>
+            <h2 style="margin-bottom: 5px;">MoneyWise</h2>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">AES-256 Encrypted Family Finance</p>
             
+            <!-- GitHub Setup (shown when not configured) -->
+            <div id="login-setup-section">
+                <div style="background: var(--bg-elevated); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.2rem;">
+                    <div class="flex-between" style="cursor:pointer;" onclick="document.getElementById('setup-fields').style.display = document.getElementById('setup-fields').style.display === 'none' ? 'block' : 'none'">
+                        <strong style="font-size: 0.9rem;"><i class="fa-brands fa-github"></i> GitHub Connection</strong>
+                        <span id="setup-status" class="badge badge-outline" style="font-size: 0.7rem;">Required</span>
+                    </div>
+                    <div id="setup-fields" style="margin-top: 1rem;">
+                        <div class="form-group text-left" style="margin-bottom: 0.8rem;">
+                            <label style="font-size:0.8rem;">Personal Access Token (PAT)</label>
+                            <input type="password" id="loginToken" class="form-input" placeholder="ghp_xxxxxxxxxxxx" style="font-size:0.85rem;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div class="form-group text-left" style="margin-bottom: 0.8rem;">
+                                <label style="font-size:0.8rem;">GitHub Username</label>
+                                <input type="text" id="loginGhUser" class="form-input" placeholder="username" style="font-size:0.85rem;">
+                            </div>
+                            <div class="form-group text-left" style="margin-bottom: 0.8rem;">
+                                <label style="font-size:0.8rem;">Repository Name</label>
+                                <input type="text" id="loginGhRepo" class="form-input" placeholder="repo-name" style="font-size:0.85rem;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form id="login-form">
                 <div class="form-group text-left">
                     <label>Username</label>
@@ -40,15 +66,20 @@
                 </div>
                 <div class="form-group text-left">
                     <label>Password</label>
-                    <input type="password" id="loginPass" class="form-input" placeholder="admin123" required>
+                    <input type="password" id="loginPass" class="form-input" required>
                 </div>
                 <div class="form-group text-left">
                     <label>Family Encryption Key</label>
-                    <input type="password" id="loginKey" class="form-input" placeholder="Your secret passphrase" required>
+                    <input type="password" id="loginKey" class="form-input" placeholder="Your family secret passphrase" required>
                 </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
+                <div style="display:flex; align-items:center; gap:8px; margin-top: 0.5rem;">
+                    <input type="checkbox" id="loginRememberKey" style="width:16px; height:16px;">
+                    <label for="loginRememberKey" style="font-size:0.82rem; color: var(--text-secondary); cursor:pointer;">Remember encryption key on this device</label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1.2rem;">
                     <i class="fa-solid fa-lock-open"></i> Decrypt & Login
                 </button>
+                <div id="login-error" style="margin-top: 1rem; color: var(--danger); font-size: 0.85rem; display:none;"></div>
             </form>
         </div>
     </div>

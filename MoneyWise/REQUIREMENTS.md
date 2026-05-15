@@ -6,7 +6,18 @@
 
 ## 📅 VERSION HISTORY & CHANGELOG
 
-### v2.2 - Password Management, Yearly Budget & Analytics (Current)
+### v3.0 - Multi-Device Architecture Overhaul & Production Deploy (Current)
+- **CRITICAL FIX:** Login screen now includes GitHub Connection setup (PAT/Username/Repo) — this was the root cause of the 404 error when hosting on GitHub Pages. Previous versions required PAT to be configured in Settings AFTER login, creating a chicken-and-egg problem where non-admin users could never login.
+- **First-Time Setup Flow:** When `data.enc` doesn't exist yet, admin can login with `admin/admin123` and the app automatically creates the encrypted data file on GitHub.
+- **Remember Encryption Key:** Optional "Remember key on this device" checkbox stores the key in localStorage for auto-login.
+- **Auto-Login:** If GitHub is configured AND encryption key is remembered, the app auto-logs in by fetching fresh data from GitHub.
+- **SHA Conflict Resolution:** API layer now handles HTTP 409 conflicts when two devices edit simultaneously.
+- **Improved Logout:** Double-tap logout (no more confirm dialog that blocks in some browsers).
+- **Sync Error Feedback:** All sync failures now show toast notifications with specific error messages.
+- **Service Worker v3:** Network-first strategy, skip caching API calls and CDN resources, proper version-based cache busting.
+- **Session Freshness:** Auto-login re-validates user against remote data (catches password changes by admin).
+
+### v2.2 - Password Management, Yearly Budget & Analytics
 - **Password Change:** Users can now change their own password from Settings (validates current password, enforces min 6 chars).
 - **Strong Passwords:** Family members created with mandatory custom password (no auto-generated weak defaults).
 - **Yearly Budget View:** Budget page now has Monthly/Yearly toggle. Yearly view multiplies monthly budget x12 and tracks full-year spending.
