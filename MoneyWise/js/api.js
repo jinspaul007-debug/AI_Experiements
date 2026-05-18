@@ -1,7 +1,40 @@
 /**
- * GitHub API + Encryption Layer v3.0
+ * GitHub API + Encryption Layer v4.1
+ * Security: All passwords hashed with SHA-256 (one-way, non-reversible).
  * Fixed: Multi-device sync, proper SHA tracking, first-time setup flow.
  */
+
+/** Hash a password with SHA-256 using CryptoJS — one-way, non-reversible */
+function hashPassword(plainText) {
+    return CryptoJS.SHA256(plainText).toString(CryptoJS.enc.Hex);
+}
+
+/** Compare a plain-text password against a stored hash */
+function verifyPassword(plainText, storedHash) {
+    // Support legacy unhashed passwords during migration
+    if (storedHash && storedHash.length !== 64) {
+        // Legacy plain-text password — compare directly
+        return plainText === storedHash;
+    }
+    return hashPassword(plainText) === storedHash;
+}
+
+/** Check if a stored password is already hashed (64 hex chars = SHA-256) */
+function isPasswordHashed(pass) {
+    return pass && pass.length === 64 && /^[a-f0-9]+$/.test(pass);
+}
+
+/** Migrate all users' passwords from plain-text to SHA-256 hashes */
+function migratePasswordsToHashed(data) {
+    let migrated = false;
+    (data.users || []).forEach(u => {
+        if (!isPasswordHashed(u.pass)) {
+            u.pass = hashPassword(u.pass);
+            migrated = true;
+        }
+    });
+    return migrated;
+}
 const GitHubAPI = {
     config: {
         token: localStorage.getItem('gh_token') || '',
@@ -105,7 +138,7 @@ const GitHubAPI = {
 
     getDefaultData() {
         return {
-            users: [{ id: 'admin', name: 'Admin', role: 'admin', pass: 'admin123' }],
+            users: [{ id: 'admin', name: 'Admin', role: 'admin', pass: hashPassword('admin123') }],
             transactions: [],
             budgets: {},
             assets: [],

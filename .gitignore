@@ -1,0 +1,19 @@
+# Security: Exclude sensitive documentation from public repo
+# These files contain setup instructions, credentials info, and architecture details
+# that could be used to attack the application
+MoneyWise/REQUIREMENTS.md
+MoneyWise/DEPLOY.md
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Gemini AI
+.gemini/

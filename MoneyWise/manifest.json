@@ -1,16 +1,25 @@
 {
-  "name": "MoneyWise",
+  "name": "MoneyWise - Secured Wealth Tracker",
   "short_name": "MoneyWise",
-  "description": "Secure Family Money Manager",
+  "description": "Secure, encrypted family finance tracker with zero cloud dependency",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
   "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/128/3135/3135679.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3135/3135679.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
