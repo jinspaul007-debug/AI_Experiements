@@ -1,7 +1,9 @@
 /**
- * GitHub API + Encryption Layer v4.1
+ * GitHub API + Encryption Layer v4.2
  * Security: All passwords hashed with SHA-256 (one-way, non-reversible).
  * Fixed: Multi-device sync, proper SHA tracking, first-time setup flow.
+ * Fixed v4.2: 404 ambiguity bug — new browsers couldn't login because repo 404 was
+ *   treated as 'file not found'. Now verifies repo access before checking file.
  */
 
 /** Hash a password with SHA-256 using CryptoJS — one-way, non-reversible */
@@ -106,8 +108,16 @@ const GitHubAPI = {
     },
 
     async fetchData() {
+        // Step 1: Verify the REPO itself is accessible (catch bad PAT/username/repo)
+        try {
+            await this.testConnection();
+        } catch (repoErr) {
+            throw new Error('GitHub connection failed: ' + repoErr.message);
+        }
+
+        // Step 2: Now fetch the data file — if 404, we KNOW repo exists but file doesn't
         const data = await this._request('GET');
-        if (!data) return null; // No data.enc exists yet
+        if (!data) return null; // data.enc truly doesn't exist yet → first-time setup
         this.config.sha = data.sha;
         try {
             const rawContent = data.content.replace(/\n/g, '');

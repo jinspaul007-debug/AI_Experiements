@@ -1,6 +1,7 @@
 /**
- * Main Application Controller v4.1 - Production Build
+ * Main Application Controller v4.2 - Production Build
  * Security: Password hashing, encrypted storage, no plain-text credentials.
+ * Fixed v4.2: Ghost config lockout, 404 ambiguity, misleading error messages.
  * Mobile-first, iOS/Android tested, cross-platform ready.
  */
 
@@ -113,7 +114,10 @@ const App = {
         const sf = document.getElementById('setup-fields');
         const ss = document.getElementById('setup-status');
         if (GitHubAPI.isConfigured()) {
-            sf.style.display = 'none'; ss.innerText = 'Connected'; ss.style.background = 'var(--success-bg)'; ss.style.color = 'var(--success)';
+            // Show as 'Saved' not 'Connected' — actual connection is tested on login
+            sf.style.display = 'none'; ss.innerText = 'Saved'; ss.style.background = 'var(--warning-bg)'; ss.style.color = 'var(--warning)';
+        } else {
+            sf.style.display = 'block'; ss.innerText = 'Required'; ss.style.background = ''; ss.style.color = '';
         }
         const rk = localStorage.getItem('mw_enc_key');
         if (rk) { document.getElementById('loginKey').value = rk; document.getElementById('loginRememberKey').checked = true; }
@@ -130,11 +134,18 @@ const App = {
             e.preventDefault();
             document.getElementById('login-error').style.display = 'none';
 
-            // Save GitHub config from login screen fields
+            // Read GitHub config from login screen fields
             const token = document.getElementById('loginToken').value.trim();
             const ghUser = document.getElementById('loginGhUser').value.trim();
             const ghRepo = document.getElementById('loginGhRepo').value.trim();
-            if (token && ghUser && ghRepo) GitHubAPI.saveConfig(token, ghUser, ghRepo, 'MoneyWise/data.enc');
+
+            // Apply config to memory (but DON'T save to localStorage yet)
+            if (token && ghUser && ghRepo) {
+                GitHubAPI.config.token = token;
+                GitHubAPI.config.username = ghUser;
+                GitHubAPI.config.repo = ghRepo;
+                GitHubAPI.config.path = 'MoneyWise/data.enc';
+            }
 
             if (!GitHubAPI.isConfigured()) { this.showLoginError('GitHub connection required. Expand the GitHub section and fill in your details.'); return; }
 
@@ -145,25 +156,39 @@ const App = {
             if (!u || !p || !key) { this.showLoginError('All fields are required.'); return; }
 
             GitHubAPI.setEncryptionKey(key);
-            if (rememberKey) localStorage.setItem('mw_enc_key', key); else localStorage.removeItem('mw_enc_key');
 
             const btn = e.target.querySelector('button[type="submit"]');
             const orig = btn.innerHTML;
             btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;margin:0;display:inline-block;vertical-align:middle;"></div> Connecting...';
             btn.disabled = true;
 
+            const resetBtn = () => { btn.innerHTML = orig; btn.disabled = false; };
+            const showGitHubFields = () => {
+                // If connection fails, re-show the GitHub fields so user can fix them
+                const sf = document.getElementById('setup-fields');
+                const ss = document.getElementById('setup-status');
+                sf.style.display = 'block';
+                ss.innerText = 'Check Settings'; ss.style.background = 'var(--danger-bg)'; ss.style.color = 'var(--danger)';
+            };
+
             try {
                 let remoteData = await GitHubAPI.fetchData();
+
+                // If we get here, the GitHub connection is VERIFIED working.
+                // NOW save the config to localStorage (prevents 'ghost config' lockout)
+                GitHubAPI.saveConfig(token || GitHubAPI.config.token, ghUser || GitHubAPI.config.username, ghRepo || GitHubAPI.config.repo, 'MoneyWise/data.enc');
+
                 if (remoteData === null) {
-                    // First-time setup: data.enc doesn't exist yet
+                    // First-time setup: data.enc doesn't exist yet (repo is verified accessible)
                     if (u === 'admin' && p === 'admin123') {
                         this.data = GitHubAPI.getDefaultData();
                         this.currentUser = this.data.users[0];
                         localStorage.setItem('mw_current_user', JSON.stringify(this.currentUser));
+                        if (rememberKey) localStorage.setItem('mw_enc_key', key); else localStorage.removeItem('mw_enc_key');
                         await GitHubAPI.pushData(this.data);
                         toast('Initial setup complete! Data saved to GitHub.');
                         this.setupApp(); this.switchView('settings'); return;
-                    } else { this.showLoginError('No data found on GitHub. First-time setup requires admin / admin123.'); btn.innerHTML = orig; btn.disabled = false; return; }
+                    } else { this.showLoginError('Database not yet initialized. The very first login must use admin / admin123 to create the database.'); resetBtn(); return; }
                 }
 
                 // Auto-migrate legacy plain-text passwords to SHA-256 hashes
@@ -173,6 +198,7 @@ const App = {
                 if (user && verifyPassword(p, user.pass)) {
                     this.currentUser = user;
                     localStorage.setItem('mw_current_user', JSON.stringify(user));
+                    if (rememberKey) localStorage.setItem('mw_enc_key', key); else localStorage.removeItem('mw_enc_key');
                     this.data = remoteData;
 
                     // Persist migration if passwords were upgraded to hashes
@@ -181,8 +207,17 @@ const App = {
                     }
 
                     this.setupApp();
-                } else { this.showLoginError('Invalid username or password.'); btn.innerHTML = orig; btn.disabled = false; }
-            } catch (err) { this.showLoginError(err.message); btn.innerHTML = orig; btn.disabled = false; }
+                } else { this.showLoginError('Invalid username or password.'); resetBtn(); }
+            } catch (err) {
+                // If the error is about GitHub connection, show the GitHub fields
+                if (err.message.includes('GitHub connection failed') || err.message.includes('Cannot access repo')) {
+                    showGitHubFields();
+                    this.showLoginError('Cannot connect to GitHub. Please check your PAT token, username, and repository name.');
+                } else {
+                    this.showLoginError(err.message);
+                }
+                resetBtn();
+            }
         });
 
         const logoutBtn = document.getElementById('logout-btn');
