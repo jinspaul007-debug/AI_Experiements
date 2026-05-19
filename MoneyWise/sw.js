@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moneywise-v6';
+const CACHE_NAME = 'moneywise-v7';
 const STATIC_ASSETS = [
     './',
     './index.html',

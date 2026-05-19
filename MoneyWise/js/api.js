@@ -1,9 +1,10 @@
 /**
- * GitHub API + Encryption Layer v4.2
+ * GitHub API + Encryption Layer v4.3
  * Security: All passwords hashed with SHA-256 (one-way, non-reversible).
  * Fixed: Multi-device sync, proper SHA tracking, first-time setup flow.
- * Fixed v4.2: 404 ambiguity bug — new browsers couldn't login because repo 404 was
- *   treated as 'file not found'. Now verifies repo access before checking file.
+ * Fixed v4.2: 404 ambiguity bug.
+ * Fixed v4.3: Chrome/cross-browser fetch caching issue. Removed testConnection 
+ *   pre-check (caused failures). All fetches now use cache:'no-store' and 'Bearer' auth.
  */
 
 /** Hash a password with SHA-256 using CryptoJS — one-way, non-reversible */
@@ -37,6 +38,7 @@ function migratePasswordsToHashed(data) {
     });
     return migrated;
 }
+
 const GitHubAPI = {
     config: {
         token: localStorage.getItem('gh_token') || '',
@@ -70,11 +72,22 @@ const GitHubAPI = {
         return !!this.config.encKey;
     },
 
+    /** Build standard headers for GitHub API — uses Bearer auth (works with all PAT types) */
+    _headers() {
+        return {
+            'Authorization': `Bearer ${this.config.token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'X-GitHub-Api-Version': '2022-11-28'
+        };
+    },
+
     async testConnection() {
         if (!this.config.token) throw new Error('No GitHub token configured');
         const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
         const res = await fetch(url, {
-            headers: { 'Authorization': `token ${this.config.token}`, 'Accept': 'application/vnd.github.v3+json' }
+            headers: this._headers(),
+            cache: 'no-store'
         });
         if (!res.ok) throw new Error(`Cannot access repo (${res.status}). Check token/username/repo.`);
         return true;
@@ -83,14 +96,20 @@ const GitHubAPI = {
     async _request(method, body = null) {
         if (!this.config.token) throw new Error('GitHub token not set.');
         const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${this.config.path}`;
-        const headers = {
-            'Authorization': `token ${this.config.token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json'
+        const options = {
+            method,
+            headers: this._headers(),
+            cache: 'no-store'   // CRITICAL: prevents browser from caching 404 responses
         };
-        const options = { method, headers };
         if (body) options.body = JSON.stringify(body);
-        const response = await fetch(url, options);
+
+        let response;
+        try {
+            response = await fetch(url, options);
+        } catch (networkErr) {
+            throw new Error('Network error: Cannot reach GitHub. Check your internet connection.');
+        }
+
         if (!response.ok) {
             if (response.status === 404 && method === 'GET') return null;
             if (response.status === 409) {
@@ -100,24 +119,46 @@ const GitHubAPI = {
                 throw new Error('Data was updated by another device. Please refresh and try again.');
             }
             if (response.status === 401 || response.status === 403) {
-                throw new Error('Access denied. Your token may have expired. Please update in Settings.');
+                throw new Error('Access denied. Your PAT token may have expired or lacks permissions.');
             }
             throw new Error(`GitHub API Error: ${response.status}`);
         }
         return await response.json();
     },
 
+    /**
+     * Fetch and decrypt data.enc from GitHub.
+     * Returns: decrypted JSON data, or null if data.enc doesn't exist yet.
+     * Throws: specific errors for connection issues, wrong key, or corruption.
+     */
     async fetchData() {
-        // Step 1: Verify the REPO itself is accessible (catch bad PAT/username/repo)
+        // Directly try to fetch the data file (no separate testConnection call)
+        let data;
         try {
-            await this.testConnection();
-        } catch (repoErr) {
-            throw new Error('GitHub connection failed: ' + repoErr.message);
+            data = await this._request('GET');
+        } catch (fetchErr) {
+            // Network errors or auth errors bubble up with clear messages
+            throw fetchErr;
         }
 
-        // Step 2: Now fetch the data file — if 404, we KNOW repo exists but file doesn't
-        const data = await this._request('GET');
-        if (!data) return null; // data.enc truly doesn't exist yet → first-time setup
+        if (!data) {
+            // Got 404 — but is it because the FILE doesn't exist, or the REPO/TOKEN is wrong?
+            // For a public repo, we can verify by checking if the repo endpoint is accessible.
+            // This is only called when we get a 404, not on every login.
+            try {
+                const repoUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
+                const repoCheck = await fetch(repoUrl, { cache: 'no-store' }); // No auth needed for public repo
+                if (!repoCheck.ok) {
+                    throw new Error(`Repository "${this.config.username}/${this.config.repo}" not found. Check your GitHub username and repository name.`);
+                }
+            } catch (repoErr) {
+                if (repoErr.message.includes('Repository')) throw repoErr;
+                // Network error checking repo — assume repo is fine, report as no data
+                console.warn('Could not verify repo, assuming data.enc does not exist yet.');
+            }
+            return null; // data.enc truly doesn't exist → first-time setup
+        }
+
         this.config.sha = data.sha;
         try {
             const rawContent = data.content.replace(/\n/g, '');

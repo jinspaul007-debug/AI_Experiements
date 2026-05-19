@@ -1,7 +1,7 @@
 /**
- * Main Application Controller v4.2 - Production Build
+ * Main Application Controller v4.3 - Production Build
  * Security: Password hashing, encrypted storage, no plain-text credentials.
- * Fixed v4.2: Ghost config lockout, 404 ambiguity, misleading error messages.
+ * Fixed v4.3: Chrome cross-browser fetch caching, Bearer auth, actual error messages.
  * Mobile-first, iOS/Android tested, cross-platform ready.
  */
 
@@ -209,13 +209,13 @@ const App = {
                     this.setupApp();
                 } else { this.showLoginError('Invalid username or password.'); resetBtn(); }
             } catch (err) {
-                // If the error is about GitHub connection, show the GitHub fields
-                if (err.message.includes('GitHub connection failed') || err.message.includes('Cannot access repo')) {
+                console.error('Login error:', err);
+                // Show actual error + re-show GitHub fields if it's a connection issue
+                const msg = err.message || 'Unknown error';
+                if (msg.includes('Network error') || msg.includes('not found') || msg.includes('Access denied') || msg.includes('Cannot access') || msg.includes('GitHub API Error')) {
                     showGitHubFields();
-                    this.showLoginError('Cannot connect to GitHub. Please check your PAT token, username, and repository name.');
-                } else {
-                    this.showLoginError(err.message);
                 }
+                this.showLoginError(msg);
                 resetBtn();
             }
         });
