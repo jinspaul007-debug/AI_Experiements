@@ -1,8 +1,16 @@
 /**
- * GitHub API + Encryption Layer v4.4
- * Security: All passwords hashed with SHA-256 (one-way, non-reversible).
- * Fixed v4.4: Config value trimming, auth on repo check, spellcheck-safe inputs.
+ * GitHub API + Encryption Layer v5.0
+ * Security: SHA-256 hashed passwords, AES-256 encrypted storage, XSS sanitization.
+ * Reliable: Cache-busted fetches, 409 conflict retry, input trimming.
  */
+
+/** Sanitize string for safe HTML insertion — prevents XSS */
+function sanitize(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(String(str)));
+    return div.innerHTML;
+}
 
 /** Hash a password with SHA-256 using CryptoJS — one-way, non-reversible */
 function hashPassword(plainText) {
@@ -13,7 +21,6 @@ function hashPassword(plainText) {
 function verifyPassword(plainText, storedHash) {
     // Support legacy unhashed passwords during migration
     if (storedHash && storedHash.length !== 64) {
-        // Legacy plain-text password — compare directly
         return plainText === storedHash;
     }
     return hashPassword(plainText) === storedHash;
@@ -36,6 +43,26 @@ function migratePasswordsToHashed(data) {
     return migrated;
 }
 
+/** Validate imported data structure has required fields */
+function validateDataStructure(data) {
+    if (!data || typeof data !== 'object') return { valid: false, error: 'Not a valid JSON object' };
+    if (!Array.isArray(data.users) || data.users.length === 0) return { valid: false, error: 'Missing or empty users array' };
+    const adminUser = data.users.find(u => u.id === 'admin');
+    if (!adminUser) return { valid: false, error: 'No admin user found in data' };
+    if (!adminUser.pass) return { valid: false, error: 'Admin user has no password' };
+    // Ensure required arrays exist
+    if (!Array.isArray(data.transactions)) data.transactions = [];
+    if (!data.budgets || typeof data.budgets !== 'object') data.budgets = {};
+    if (!Array.isArray(data.assets)) data.assets = [];
+    if (!Array.isArray(data.liabilities)) data.liabilities = [];
+    if (!Array.isArray(data.banks)) data.banks = [];
+    if (!Array.isArray(data.chittis)) data.chittis = [];
+    if (!data.settings || typeof data.settings !== 'object') data.settings = { currency: '₹', paymentMethods: ['Cash', 'UPI', 'Debit Card', 'Amazon Pay', 'Credit Card'] };
+    if (!Array.isArray(data.netWorthHistory)) data.netWorthHistory = [];
+    if (!Array.isArray(data.eduExpenses)) data.eduExpenses = [];
+    return { valid: true };
+}
+
 const GitHubAPI = {
     config: {
         token: (localStorage.getItem('gh_token') || '').trim(),
@@ -47,7 +74,6 @@ const GitHubAPI = {
     },
 
     saveConfig(token, username, repo, path) {
-        // Aggressively trim all values to prevent whitespace issues
         this.config.token = (token || '').trim();
         this.config.username = (username || '').trim();
         this.config.repo = (repo || '').trim();
@@ -58,19 +84,15 @@ const GitHubAPI = {
         localStorage.setItem('gh_path', this.config.path);
     },
 
-    setEncryptionKey(key) {
-        this.config.encKey = key;
-    },
+    setEncryptionKey(key) { this.config.encKey = key; },
 
     isConfigured() {
         return !!(this.config.token && this.config.username && this.config.repo);
     },
 
-    hasEncryptionKey() {
-        return !!this.config.encKey;
-    },
+    hasEncryptionKey() { return !!this.config.encKey; },
 
-    /** Build standard headers for GitHub API — uses Bearer auth (works with all PAT types) */
+    /** Build standard headers for GitHub API */
     _headers() {
         return {
             'Authorization': `Bearer ${this.config.token}`,
@@ -83,10 +105,7 @@ const GitHubAPI = {
     async testConnection() {
         if (!this.config.token) throw new Error('No GitHub token configured');
         const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
-        const res = await fetch(url, {
-            headers: this._headers(),
-            cache: 'no-store'
-        });
+        const res = await fetch(url, { headers: this._headers(), cache: 'no-store' });
         if (!res.ok) throw new Error(`Cannot access repo (${res.status}). Check token/username/repo.`);
         return true;
     },
@@ -94,11 +113,7 @@ const GitHubAPI = {
     async _request(method, body = null) {
         if (!this.config.token) throw new Error('GitHub token not set.');
         const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${this.config.path}`;
-        const options = {
-            method,
-            headers: this._headers(),
-            cache: 'no-store'   // CRITICAL: prevents browser from caching 404 responses
-        };
+        const options = { method, headers: this._headers(), cache: 'no-store' };
         if (body) options.body = JSON.stringify(body);
 
         let response;
@@ -111,10 +126,10 @@ const GitHubAPI = {
         if (!response.ok) {
             if (response.status === 404 && method === 'GET') return null;
             if (response.status === 409) {
-                // SHA conflict — re-fetch to get latest SHA
+                // SHA conflict — auto-retry: fetch latest SHA and let caller retry
                 const fresh = await this._request('GET');
                 if (fresh) this.config.sha = fresh.sha;
-                throw new Error('Data was updated by another device. Please refresh and try again.');
+                throw new Error('CONFLICT_RETRY');
             }
             if (response.status === 401 || response.status === 403) {
                 throw new Error('Access denied. Your PAT token may have expired or lacks permissions.');
@@ -124,30 +139,19 @@ const GitHubAPI = {
         return await response.json();
     },
 
-    /**
-     * Fetch and decrypt data.enc from GitHub.
-     * Returns: decrypted JSON data, or null if data.enc doesn't exist yet.
-     * Throws: specific errors for connection issues, wrong key, or corruption.
-     */
     async fetchData() {
-        // Directly try to fetch the data file (no separate testConnection call)
         let data;
         try {
             data = await this._request('GET');
         } catch (fetchErr) {
-            // Network errors or auth errors bubble up with clear messages
             throw fetchErr;
         }
 
         if (!data) {
-            // Got 404 — but is it because the FILE doesn't exist, or the REPO/TOKEN is wrong?
-            // Verify by checking the repo endpoint WITH auth headers (avoids rate-limiting).
+            // 404 — verify repo exists to distinguish "file missing" from "repo wrong"
             try {
                 const repoUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
-                const repoCheck = await fetch(repoUrl, {
-                    headers: this._headers(),
-                    cache: 'no-store'
-                });
+                const repoCheck = await fetch(repoUrl, { headers: this._headers(), cache: 'no-store' });
                 if (!repoCheck.ok) {
                     const status = repoCheck.status;
                     if (status === 401 || status === 403) {
@@ -157,10 +161,9 @@ const GitHubAPI = {
                 }
             } catch (repoErr) {
                 if (repoErr.message.includes('Repository') || repoErr.message.includes('Access denied')) throw repoErr;
-                // Network error checking repo — assume repo is fine, report as no data
                 console.warn('Could not verify repo, assuming data.enc does not exist yet.');
             }
-            return null; // data.enc truly doesn't exist → first-time setup
+            return null;
         }
 
         this.config.sha = data.sha;
@@ -177,7 +180,7 @@ const GitHubAPI = {
         }
     },
 
-    async pushData(jsonData) {
+    async pushData(jsonData, retryCount = 0) {
         if (!this.config.encKey) throw new Error('Encryption key not set.');
         const encrypted = CryptoJS.AES.encrypt(JSON.stringify(jsonData), this.config.encKey).toString();
         const contentBase64 = btoa(unescape(encodeURIComponent(encrypted)));
@@ -186,9 +189,21 @@ const GitHubAPI = {
             content: contentBase64
         };
         if (this.config.sha) body.sha = this.config.sha;
-        const response = await this._request('PUT', body);
-        if (response && response.content) this.config.sha = response.content.sha;
-        return true;
+        try {
+            const response = await this._request('PUT', body);
+            if (response && response.content) this.config.sha = response.content.sha;
+            return true;
+        } catch (err) {
+            if (err.message === 'CONFLICT_RETRY' && retryCount < 2) {
+                // Auto-retry with fresh SHA (already updated by _request)
+                console.warn(`SHA conflict, retrying... (attempt ${retryCount + 1})`);
+                return this.pushData(jsonData, retryCount + 1);
+            }
+            if (err.message === 'CONFLICT_RETRY') {
+                throw new Error('Data was updated by another device. Please refresh and try again.');
+            }
+            throw err;
+        }
     },
 
     getDefaultData() {
@@ -201,7 +216,8 @@ const GitHubAPI = {
             banks: [],
             chittis: [],
             settings: { currency: '₹', paymentMethods: ['Cash', 'UPI', 'Debit Card', 'Amazon Pay', 'Credit Card'] },
-            netWorthHistory: []
+            netWorthHistory: [],
+            eduExpenses: []
         };
     }
 };

@@ -120,6 +120,7 @@
                 <li data-view="transactions"><a><i class="fa-solid fa-money-bill-transfer"></i> Transactions</a></li>
                 <li data-view="assets"><a><i class="fa-solid fa-chart-pie"></i> Portfolio & Chitti</a></li>
                 <li data-view="budget"><a><i class="fa-solid fa-bullseye"></i> Budgets</a></li>
+                <li data-view="education"><a><i class="fa-solid fa-graduation-cap"></i> Education</a></li>
                 <li data-view="settings"><a><i class="fa-solid fa-gear"></i> Settings</a></li>
             </ul>
             <div class="user-card">
@@ -343,6 +344,78 @@
                     </div>
                 </section>
 
+                <!-- 6. EDUCATION TRACKING -->
+                <section id="view-education" class="view">
+                    <div class="dash-grid">
+                        <div class="card">
+                            <div class="stat-label flex-between">Total Education Spend <i class="fa-solid fa-graduation-cap text-primary"></i></div>
+                            <div class="stat-value text-primary" id="edu-total">₹0</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label flex-between">This Year <i class="fa-solid fa-calendar text-success"></i></div>
+                            <div class="stat-value text-success" id="edu-year-total">₹0</div>
+                        </div>
+                        <div class="card">
+                            <div class="stat-label flex-between">This Month <i class="fa-solid fa-calendar-day text-warning"></i></div>
+                            <div class="stat-value text-warning" id="edu-month-total">₹0</div>
+                        </div>
+                    </div>
+
+                    <!-- Per-child summary -->
+                    <div class="dash-grid" style="margin-top:1.5rem;">
+                        <div class="card" style="border-left: 4px solid #ec4899;">
+                            <div class="stat-label"><i class="fa-solid fa-child-dress" style="color:#ec4899"></i> Ava's Total</div>
+                            <div class="stat-value" style="color:#ec4899" id="edu-ava-total">₹0</div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid #06b6d4;">
+                            <div class="stat-label"><i class="fa-solid fa-child" style="color:#06b6d4"></i> Iza's Total</div>
+                            <div class="stat-value" style="color:#06b6d4" id="edu-iza-total">₹0</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="chart-grid" style="margin-top: 2rem;">
+                        <div class="card">
+                            <h3 class="chart-title">Spending by Category</h3>
+                            <div class="chart-box"><canvas id="cEduCatPie"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="chart-title">Ava vs Iza Comparison</h3>
+                            <div class="chart-box"><canvas id="cEduChildBar"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 1.5rem;">
+                        <h3 class="chart-title">Monthly Education Trend</h3>
+                        <div class="chart-box"><canvas id="cEduTrend"></canvas></div>
+                    </div>
+
+                    <!-- Entry list -->
+                    <div class="card" style="margin-top: 2rem;">
+                        <div class="flex-between" style="margin-bottom: 1.5rem; gap:10px; flex-wrap:wrap;">
+                            <h3><i class="fa-solid fa-graduation-cap"></i> Education Expenses</h3>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <select class="form-input" style="width:auto;" id="edu-child-filter">
+                                    <option value="all">All Children</option>
+                                    <option value="Ava">Ava</option>
+                                    <option value="Iza">Iza</option>
+                                </select>
+                                <select class="form-input" style="width:auto;" id="edu-time-filter">
+                                    <option value="year">This Year</option>
+                                    <option value="all">All Time</option>
+                                    <option value="month">This Month</option>
+                                </select>
+                                <button class="btn btn-primary" style="padding:8px 14px; border-radius:20px;" onclick="App.openModal('modal-edu')">
+                                    <i class="fa-solid fa-plus"></i> Add
+                                </button>
+                                <button class="btn btn-secondary" style="padding:8px 14px;" onclick="App.exportEduCSV()">
+                                    <i class="fa-solid fa-download"></i> CSV
+                                </button>
+                            </div>
+                        </div>
+                        <div id="edu-list"></div>
+                    </div>
+                </section>
+
                 <!-- 6. SETTINGS -->
                 <section id="view-settings" class="view">
                     <div class="chart-grid">
@@ -391,10 +464,18 @@
                             <hr style="border-color: var(--border-color); margin: 2rem 0;">
                             
                             <h3 style="margin-bottom: 1.5rem;">Data Export & Reports</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
                                 <button class="btn btn-success" id="export-excel-btn" style="background:#10b981; color:white;"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
                                 <button class="btn btn-danger" id="export-pdf-btn" style="background:#ef4444; color:white;"><i class="fa-solid fa-file-pdf"></i> Export PDF Report</button>
                             </div>
+                            
+                            <h3 style="margin-bottom: 1rem;">Backup & Restore</h3>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Export your entire database as a JSON file for safekeeping. Restore it anytime — even if data.enc is recreated from scratch.</p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
+                                <button class="btn" id="backup-full-btn" style="background:#6366f1; color:white;"><i class="fa-solid fa-download"></i> Full Backup</button>
+                                <button class="btn" id="restore-backup-btn" style="background:#f59e0b; color:white;"><i class="fa-solid fa-upload"></i> Restore Backup</button>
+                            </div>
+                            <input type="file" id="restore-file-input" accept=".json" style="display:none;">
                             
                             <hr style="border-color: var(--border-color); margin: 2rem 0;">
 
@@ -441,8 +522,8 @@
             <a class="b-nav-item active" data-view="dashboard"><i class="fa-solid fa-house"></i><span>Home</span></a>
             <a class="b-nav-item" data-view="wealth"><i class="fa-solid fa-sack-dollar"></i><span>Wealth</span></a>
             <a class="b-nav-item" data-view="transactions"><i class="fa-solid fa-money-bill-transfer"></i><span>Txns</span></a>
+            <a class="b-nav-item" data-view="education"><i class="fa-solid fa-graduation-cap"></i><span>Edu</span></a>
             <a class="b-nav-item" data-view="assets"><i class="fa-solid fa-chart-pie"></i><span>Portfolio</span></a>
-            <a class="b-nav-item" data-view="budget"><i class="fa-solid fa-bullseye"></i><span>Budget</span></a>
             <a class="b-nav-item" data-view="settings"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
         </nav>
     </div>
@@ -733,9 +814,87 @@
         </div>
     </div>
 
-    <script src="./js/api.js?v=45"></script>
-    <script src="./js/analytics.js?v=45"></script>
-    <script src="./js/app.js?v=45"></script>
+    <!-- MODAL: ADD EDUCATION EXPENSE -->
+    <div class="modal-backdrop" id="modal-edu">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-graduation-cap"></i> Add Education Expense</h2>
+                <button class="btn-icon-small" onclick="App.closeModal('modal-edu')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edu-form">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label>Child</label>
+                        <select id="edu-child" class="form-input" required>
+                            <option value="Ava">Ava</option>
+                            <option value="Iza">Iza</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="edu-date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>School / Institution</label>
+                    <input type="text" id="edu-school" class="form-input" placeholder="e.g. Delhi Public School, Kumon" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="edu-category" class="form-input" required>
+                            <option value="Tuition Fee">Tuition Fee</option>
+                            <option value="Books & Materials">Books & Materials</option>
+                            <option value="Uniform">Uniform</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Extra Classes">Extra Classes</option>
+                            <option value="Activities">Activities</option>
+                            <option value="Exam Fee">Exam Fee</option>
+                            <option value="Stationery">Stationery</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Events & Trips">Events & Trips</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₹)</label>
+                        <input type="number" id="edu-amount" class="form-input" min="1" step="0.01" required>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label>Who Paid</label>
+                        <select id="edu-who" class="form-input global-owner-sel"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="edu-pm" class="form-input">
+                            <option>Cash</option><option>UPI</option><option>Debit Card</option><option>Credit Card</option><option>Bank Transfer</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label>Term / Semester</label>
+                        <input type="text" id="edu-term" class="form-input" placeholder="e.g. Term 1, Q2 2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Grade / Class</label>
+                        <input type="text" id="edu-grade" class="form-input" placeholder="e.g. Grade 3, LKG">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description / Notes</label>
+                    <input type="text" id="edu-desc" class="form-input" placeholder="Optional details...">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;"><i class="fa-solid fa-plus"></i> Save Education Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/api.js?v=50"></script>
+    <script src="./js/analytics.js?v=50"></script>
+    <script src="./js/app.js?v=50"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(reg => {

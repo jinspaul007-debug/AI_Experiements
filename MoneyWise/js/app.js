@@ -1,8 +1,8 @@
 /**
- * Main Application Controller v4.4 - Production Build
- * Security: Password hashing, encrypted storage, no plain-text credentials.
- * Fixed v4.4: Input trimming, repo name typo prevention, auth on repo check.
- * Mobile-first, iOS/Android tested, cross-platform ready.
+ * Main Application Controller v5.0 - Production Build
+ * Security: SHA-256 hashing, AES-256 encryption, XSS sanitization, admin-only guards.
+ * Features: Full backup/restore, data export, conflict auto-retry.
+ * Mobile-first, iOS/Android tested, cross-browser verified.
  */
 
 function toast(msg, type='success') {
@@ -91,14 +91,20 @@ const App = {
         const savedUser = localStorage.getItem('mw_current_user');
         const rememberedKey = localStorage.getItem('mw_enc_key');
         if (savedUser && GitHubAPI.isConfigured() && rememberedKey) {
-            this.currentUser = JSON.parse(savedUser);
+            try {
+                this.currentUser = JSON.parse(savedUser);
+            } catch(parseErr) {
+                console.error('Corrupted saved user, clearing:', parseErr);
+                localStorage.removeItem('mw_current_user');
+                this.showLogin(); return;
+            }
             GitHubAPI.setEncryptionKey(rememberedKey);
             try {
                 await this.syncData(true);
                 const freshUser = this.data.users.find(u => u.id === this.currentUser.id);
                 if (freshUser) { this.currentUser = freshUser; localStorage.setItem('mw_current_user', JSON.stringify(freshUser)); this.setupApp(); }
                 else { this.showLogin(); }
-            } catch (e) { this.showLogin(); }
+            } catch (e) { console.error('Auto-login sync failed:', e); this.showLogin(); }
         } else { this.showLogin(); }
     },
 
@@ -126,7 +132,9 @@ const App = {
     showLoginError(msg) {
         const el = document.getElementById('login-error');
         el.innerText = msg; el.style.display = 'block';
-        setTimeout(() => { el.style.display = 'none'; }, 6000);
+        // Keep error visible for 15 seconds — mobile users need more time to read
+        if (this._loginErrTimer) clearTimeout(this._loginErrTimer);
+        this._loginErrTimer = setTimeout(() => { el.style.display = 'none'; }, 15000);
     },
 
     bindLogin() {
@@ -271,6 +279,7 @@ const App = {
         this.renderTransactions();
         this.renderPortfolio();
         this.renderBudgets();
+        this.renderEducation();
         this.renderSettings();
     },
 
@@ -297,6 +306,8 @@ const App = {
 
         document.getElementById('tx-filter').addEventListener('change', () => this.renderTransactions());
         document.getElementById('tx-cat-filter').addEventListener('change', () => this.renderTransactions());
+        document.getElementById('edu-child-filter').addEventListener('change', () => this.renderEducation());
+        document.getElementById('edu-time-filter').addEventListener('change', () => this.renderEducation());
     },
 
     switchView(viewId) {
@@ -304,11 +315,14 @@ const App = {
         const v = document.getElementById(`view-${viewId}`);
         if(v) v.classList.add('active');
         if (viewId === 'dashboard' || viewId === 'wealth' || viewId === 'assets' || viewId === 'budget') Analytics.renderCharts(this.data);
+        if (viewId === 'education') this.renderEducation();
     },
 
     openModal(id) {
         const el = document.getElementById(id);
         el.classList.add('active');
+        // Pre-fill date fields
+        if (id === 'modal-edu') document.getElementById('edu-date').value = getLocalDateStr();
         // Backdrop click to close
         if(!el._backdropBound) {
             el._backdropBound = true;
@@ -627,6 +641,32 @@ const App = {
             this.data.budgets[key] = parseFloat(document.getElementById('budget-amount').value);
             this.closeModal('modal-budget'); e.target.reset(); toast('Budget saved!'); this.saveAndSync();
         });
+
+        // Education form
+        document.getElementById('edu-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(!this.data.eduExpenses) this.data.eduExpenses = [];
+            const amount = parseFloat(document.getElementById('edu-amount').value);
+            if(!amount || amount <= 0) return toast('Enter a valid amount', 'error');
+            this.data.eduExpenses.unshift({
+                id: Date.now().toString(),
+                child: document.getElementById('edu-child').value,
+                date: document.getElementById('edu-date').value,
+                school: document.getElementById('edu-school').value.trim(),
+                category: document.getElementById('edu-category').value,
+                amount: amount,
+                whoPaid: document.getElementById('edu-who').value,
+                paymentMethod: document.getElementById('edu-pm').value,
+                term: document.getElementById('edu-term').value.trim(),
+                grade: document.getElementById('edu-grade').value.trim(),
+                description: document.getElementById('edu-desc').value.trim(),
+                timestamp: new Date().toISOString()
+            });
+            this.closeModal('modal-edu'); e.target.reset();
+            document.getElementById('edu-date').value = getLocalDateStr();
+            toast('Education expense saved!');
+            this.saveAndSync();
+        });
     },
 
     bindSettings() {
@@ -650,16 +690,18 @@ const App = {
         });
 
         document.getElementById('add-member-btn').addEventListener('click', () => {
+            if(this.currentUser?.role !== 'admin') return toast('Only admin can add members', 'error');
             const name = document.getElementById('new-member-name').value.trim();
             const pass = document.getElementById('new-member-pass').value.trim();
             const role = document.getElementById('new-member-role').value;
             if(!name) return toast('Enter a name', 'error');
             if(!pass) return toast('Set a password for this member', 'error');
+            if(pass.length < 6) return toast('Password must be at least 6 characters', 'error');
             const id = name.toLowerCase().replace(/\s/g,'');
             if(!this.data.users) this.data.users = [];
             if(this.data.users.find(u => u.id === id)) return toast('User already exists', 'error');
             this.data.users.push({ id, name, role, pass: hashPassword(pass) });
-            toast(`${name} added! Login: ${id} / [password you set]`);
+            toast(`${sanitize(name)} added! Login: ${id} / [password you set]`);
             this.saveAndSync();
             document.getElementById('new-member-name').value = '';
             document.getElementById('new-member-pass').value = '';
@@ -680,6 +722,9 @@ const App = {
 
         document.getElementById('export-excel-btn').addEventListener('click', () => this.exportCSV());
         document.getElementById('export-pdf-btn').addEventListener('click', () => this.exportPDF());
+        document.getElementById('backup-full-btn').addEventListener('click', () => this.exportFullBackup());
+        document.getElementById('restore-backup-btn').addEventListener('click', () => document.getElementById('restore-file-input').click());
+        document.getElementById('restore-file-input').addEventListener('change', (e) => this.restoreFromBackup(e));
         
         document.getElementById('change-pass-btn').addEventListener('click', () => {
             const oldP = document.getElementById('change-old-pass').value;
@@ -852,12 +897,12 @@ const App = {
             else if(tx.type === 'investment' || tx.type === 'chitti') { color = 'text-primary'; icon = 'fa-piggy-bank'; sign = '-'; }
             else { color = 'text-danger'; icon = 'fa-arrow-up'; sign = '-'; }
 
-            const catText = tx.minorCategory ? `${tx.category} <i class="fa-solid fa-angle-right" style="font-size:0.7em;"></i> ${tx.minorCategory}` : tx.category;
+            const catText = tx.minorCategory ? `${sanitize(tx.category)} <i class="fa-solid fa-angle-right" style="font-size:0.7em;"></i> ${sanitize(tx.minorCategory)}` : sanitize(tx.category);
 
             div.innerHTML = `<div class="list-icon ${color}"><i class="fa-solid ${icon}"></i></div>
-                <div class="list-details"><div class="list-title">${tx.description || catText} <span class="badge badge-outline">${tx.paymentMethod}</span></div><div class="list-subtitle">${tx.date} • ${tx.whoPaid || 'Admin'}</div></div>
+                <div class="list-details"><div class="list-title">${sanitize(tx.description) || catText} <span class="badge badge-outline">${sanitize(tx.paymentMethod)}</span></div><div class="list-subtitle">${sanitize(tx.date)} • ${sanitize(tx.whoPaid) || 'Admin'}</div></div>
                 <div style="text-align:right"><div class="list-amount ${color}">${sign}${this.fmtMoney(tx.amount)}</div>
-                <button class="btn-icon-small" style="width:24px;height:24px; font-size:10px; display:inline-flex; margin-top:4px;" onclick="App.deleteItem('transactions', '${tx.id}')"><i class="fa-solid fa-trash"></i></button></div>`;
+                <button class="btn-icon-small" style="width:24px;height:24px; font-size:10px; display:inline-flex; margin-top:4px;" onclick="App.deleteItem('transactions', '${sanitize(tx.id)}')"><i class="fa-solid fa-trash"></i></button></div>`;
             list.appendChild(div);
         });
     },
@@ -957,8 +1002,8 @@ const App = {
         (this.data?.users || []).forEach(u => {
             const li = document.createElement('li'); li.className = 'list-item';
             li.innerHTML = `<div class="list-icon" style="background:var(--primary-glow)"><i class="fa-solid fa-user" style="color:var(--primary)"></i></div>
-            <div class="list-details"><div class="list-title">${u.name} <span class="badge badge-outline">${u.role}</span></div><div class="list-subtitle">Login ID: <strong>${u.id}</strong></div></div>
-            ${u.id !== 'admin' ? `<button class="btn-icon-small" onclick="App.deleteUser('${u.id}')"><i class="fa-solid fa-trash text-danger"></i></button>` : '<span class="badge" style="background:var(--success-bg);color:var(--success)">Owner</span>'}`;
+            <div class="list-details"><div class="list-title">${sanitize(u.name)} <span class="badge badge-outline">${sanitize(u.role)}</span></div><div class="list-subtitle">Login ID: <strong>${sanitize(u.id)}</strong></div></div>
+            ${u.id !== 'admin' && this.currentUser?.role === 'admin' ? `<button class="btn-icon-small" onclick="App.deleteUser('${sanitize(u.id)}')"><i class="fa-solid fa-trash text-danger"></i></button>` : u.id === 'admin' ? '<span class="badge" style="background:var(--success-bg);color:var(--success)">Owner</span>' : ''}`;
             ul.appendChild(li);
         });
         
@@ -967,17 +1012,235 @@ const App = {
         pms.forEach(p => { const c = document.createElement('div'); c.className='chip'; c.innerText = p; pml.appendChild(c); });
     },
 
+    /** ===== EDUCATION TRACKING ===== */
+    renderEducation() {
+        if (!this.data) return;
+        if (!this.data.eduExpenses) this.data.eduExpenses = [];
+        const exps = this.data.eduExpenses;
+        const now = new Date();
+        const cm = now.toISOString().slice(0,7);
+        const cy = now.getFullYear().toString();
+
+        // Summary stats
+        const total = exps.reduce((s,e) => s + parseFloat(e.amount||0), 0);
+        const yearTotal = exps.filter(e => e.date && e.date.startsWith(cy)).reduce((s,e) => s + parseFloat(e.amount||0), 0);
+        const monthTotal = exps.filter(e => e.date && e.date.startsWith(cm)).reduce((s,e) => s + parseFloat(e.amount||0), 0);
+        const avaTotal = exps.filter(e => e.child === 'Ava').reduce((s,e) => s + parseFloat(e.amount||0), 0);
+        const izaTotal = exps.filter(e => e.child === 'Iza').reduce((s,e) => s + parseFloat(e.amount||0), 0);
+
+        document.getElementById('edu-total').innerText = this.fmtMoney(total);
+        document.getElementById('edu-year-total').innerText = this.fmtMoney(yearTotal);
+        document.getElementById('edu-month-total').innerText = this.fmtMoney(monthTotal);
+        document.getElementById('edu-ava-total').innerText = this.fmtMoney(avaTotal);
+        document.getElementById('edu-iza-total').innerText = this.fmtMoney(izaTotal);
+
+        // Filter
+        const childFilter = document.getElementById('edu-child-filter').value;
+        const timeFilter = document.getElementById('edu-time-filter').value;
+        let filtered = exps.filter(e => {
+            if (childFilter !== 'all' && e.child !== childFilter) return false;
+            if (timeFilter === 'month') return e.date && e.date.startsWith(cm);
+            if (timeFilter === 'year') return e.date && e.date.startsWith(cy);
+            return true;
+        });
+
+        // Render list
+        const list = document.getElementById('edu-list'); list.innerHTML = '';
+        if (filtered.length === 0) {
+            list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-graduation-cap"></i><p>No education expenses yet. Tap + to add one.</p></div>`;
+        } else {
+            filtered.forEach(e => {
+                const childColor = e.child === 'Ava' ? '#ec4899' : '#06b6d4';
+                const childIcon = e.child === 'Ava' ? 'fa-child-dress' : 'fa-child';
+                const div = document.createElement('div'); div.className = 'list-item';
+                div.innerHTML = `<div class="list-icon" style="color:${childColor}; background:${childColor}15;"><i class="fa-solid ${childIcon}"></i></div>
+                    <div class="list-details">
+                        <div class="list-title">${sanitize(e.school)} <span class="badge badge-outline">${sanitize(e.category)}</span></div>
+                        <div class="list-subtitle">${sanitize(e.date)} \u2022 ${sanitize(e.child)} \u2022 ${sanitize(e.whoPaid||'')} ${e.grade ? '\u2022 '+sanitize(e.grade) : ''}</div>
+                        ${e.description ? `<div class="list-subtitle" style="font-size:0.72rem;color:var(--text-tertiary)">${sanitize(e.description)}</div>` : ''}
+                    </div>
+                    <div style="text-align:right">
+                        <div class="list-amount" style="color:${childColor}">-${this.fmtMoney(e.amount)}</div>
+                        <div style="font-size:0.7rem;color:var(--text-secondary)">${sanitize(e.paymentMethod||'')}</div>
+                        <button class="btn-icon-small" style="width:22px;height:22px;font-size:9px;display:inline-flex;margin-top:3px;" onclick="App.deleteItem('eduExpenses','${sanitize(e.id)}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        // Charts
+        if (document.getElementById('view-education').classList.contains('active')) {
+            this.renderEduCharts(exps);
+        }
+    },
+
+    renderEduCharts(exps) {
+        const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#f43f5e','#84cc16'];
+
+        // 1. Category Pie
+        const catTotals = {};
+        exps.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + parseFloat(e.amount||0); });
+        const catLabels = Object.keys(catTotals), catValues = Object.values(catTotals);
+        Analytics.c('cEduCatPie', { type: 'doughnut',
+            data: { labels: catLabels.length ? catLabels : ['No Data'], datasets: [{ data: catValues.length ? catValues : [1], backgroundColor: catValues.length ? COLORS : ['#27272a'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }
+        });
+
+        // 2. Child Comparison Bar (by category)
+        const avaCats = {}, izaCats = {};
+        exps.forEach(e => {
+            const cat = e.category;
+            if (e.child === 'Ava') avaCats[cat] = (avaCats[cat]||0) + parseFloat(e.amount||0);
+            else izaCats[cat] = (izaCats[cat]||0) + parseFloat(e.amount||0);
+        });
+        const allCats = [...new Set([...Object.keys(avaCats), ...Object.keys(izaCats)])];
+        if (!allCats.length) allCats.push('No Data');
+        Analytics.c('cEduChildBar', { type: 'bar',
+            data: { labels: allCats, datasets: [
+                { label: 'Ava', data: allCats.map(c => avaCats[c]||0), backgroundColor: '#ec4899', borderRadius: 4 },
+                { label: 'Iza', data: allCats.map(c => izaCats[c]||0), backgroundColor: '#06b6d4', borderRadius: 4 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(255,255,255,0.04)' } }, x: { grid: { display: false } } }, plugins: { legend: { position: 'top', labels: { boxWidth: 10 } } } }
+        });
+
+        // 3. Monthly Trend Line
+        const year = new Date().getFullYear();
+        const months = [], avaData = [], izaData = [];
+        for (let m = 0; m < 12; m++) {
+            const prefix = `${year}-${String(m+1).padStart(2,'0')}`;
+            months.push(new Date(year, m).toLocaleString('default',{month:'short'}));
+            let av = 0, iz = 0;
+            exps.forEach(e => {
+                if (e.date && e.date.startsWith(prefix)) {
+                    if (e.child === 'Ava') av += parseFloat(e.amount||0);
+                    else iz += parseFloat(e.amount||0);
+                }
+            });
+            avaData.push(av); izaData.push(iz);
+        }
+        Analytics.c('cEduTrend', { type: 'line',
+            data: { labels: months, datasets: [
+                { label: 'Ava', data: avaData, borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.1)', fill: true, tension: 0.4 },
+                { label: 'Iza', data: izaData, borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.1)', fill: true, tension: 0.4 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: 'rgba(255,255,255,0.04)' } }, x: { grid: { display: false } } }, plugins: { legend: { position: 'top', labels: { boxWidth: 10 } } } }
+        });
+    },
+
+    exportEduCSV() {
+        if(!this.data?.eduExpenses?.length) return toast('No education data to export', 'error');
+        const esc = (v) => { const s = String(v||''); return s.includes(',') || s.includes('"') || s.includes('\n') ? '"'+s.replace(/"/g,'""')+'"' : s; };
+        const rows = [["Date","Child","School/Institution","Category","Amount","Who Paid","Payment Method","Term","Grade","Description"]];
+        this.data.eduExpenses.forEach(e => {
+            rows.push([e.date, e.child, esc(e.school), e.category, e.amount, e.whoPaid, e.paymentMethod, esc(e.term), esc(e.grade), esc(e.description)]);
+        });
+        const blob = new Blob([rows.map(r=>r.join(',')).join('\n')], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url; link.download = `MoneyWise_Education_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast('Education expenses exported!');
+    },
+
     async deleteUser(id) {
         if(id === 'admin') return toast('Cannot delete admin', 'error');
-        const ok = await mConfirm('Remove this family member permanently?', 'Delete Member');
+        if(this.currentUser?.role !== 'admin') return toast('Only admin can delete members', 'error');
+        const userName = this.data.users.find(u => u.id === id)?.name || id;
+        const ok = await mConfirm(`Remove <strong>${sanitize(userName)}</strong> permanently? Their transaction history will remain.`, 'Delete Member');
         if (!ok) return;
         this.data.users = this.data.users.filter(x => x.id !== id); this.saveAndSync();
     },
 
     async deleteItem(collection, id) {
-        const ok = await mConfirm('Are you sure you want to delete this item?', 'Delete Item');
+        const item = (this.data[collection] || []).find(x => x.id === id);
+        const itemName = item ? (item.name || item.description || item.category || 'this item') : 'this item';
+        const ok = await mConfirm(`Delete <strong>${sanitize(itemName)}</strong> permanently?`, 'Delete Item');
         if (!ok) return;
         this.data[collection] = this.data[collection].filter(x => x.id !== id); this.saveAndSync();
+    },
+
+    /** Export entire database as a downloadable JSON file */
+    exportFullBackup() {
+        if(!this.data) return toast('No data to export', 'error');
+        const backup = {
+            _moneywise_backup: true,
+            _version: '5.0',
+            _exported: new Date().toISOString(),
+            _exportedBy: this.currentUser?.name || 'Unknown',
+            data: JSON.parse(JSON.stringify(this.data)) // Deep clone
+        };
+        // Strip password hashes from backup for extra security — they'll need to be reset on restore
+        // Actually keep them so restore is seamless. They're already SHA-256 hashed (one-way).
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `MoneyWise_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast('Full backup downloaded!', 'success');
+    },
+
+    /** Restore database from a previously exported JSON backup file */
+    async restoreFromBackup(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        event.target.value = ''; // Reset file input
+
+        if (this.currentUser?.role !== 'admin') {
+            return toast('Only admin can restore data', 'error');
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                let importData;
+
+                // Support both wrapper format and raw data format
+                if (parsed._moneywise_backup && parsed.data) {
+                    importData = parsed.data;
+                    toast(`Loading backup from ${parsed._exported?.slice(0,10) || 'unknown date'}...`, 'info');
+                } else if (parsed.users && Array.isArray(parsed.users)) {
+                    importData = parsed;
+                } else {
+                    return toast('Invalid backup file format. Expected MoneyWise JSON backup.', 'error');
+                }
+
+                // Validate structure
+                const validation = validateDataStructure(importData);
+                if (!validation.valid) {
+                    return toast(`Invalid data: ${validation.error}`, 'error');
+                }
+
+                // Count what's being restored
+                const stats = [
+                    `${importData.users?.length || 0} users`,
+                    `${importData.transactions?.length || 0} transactions`,
+                    `${importData.assets?.length || 0} assets`,
+                    `${importData.banks?.length || 0} banks`,
+                    `${importData.liabilities?.length || 0} loans`,
+                    `${importData.chittis?.length || 0} chittis`
+                ].join(', ');
+
+                const ok = await mConfirm(
+                    `<strong>⚠️ This will REPLACE all current data!</strong><br><br>` +
+                    `Backup contains: ${stats}<br><br>` +
+                    `This cannot be undone. Continue?`,
+                    'Restore Backup'
+                );
+                if (!ok) return;
+
+                this.data = importData;
+                await this.saveAndSync();
+                toast('Data restored successfully! All data has been synced to GitHub.', 'success');
+            } catch (parseErr) {
+                console.error('Restore error:', parseErr);
+                toast('Failed to parse backup file. Make sure it is a valid MoneyWise JSON backup.', 'error');
+            }
+        };
+        reader.readAsText(file);
     }
 };
 
