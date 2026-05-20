@@ -1,7 +1,7 @@
 /**
- * Main Application Controller v4.3 - Production Build
+ * Main Application Controller v4.4 - Production Build
  * Security: Password hashing, encrypted storage, no plain-text credentials.
- * Fixed v4.3: Chrome cross-browser fetch caching, Bearer auth, actual error messages.
+ * Fixed v4.4: Input trimming, repo name typo prevention, auth on repo check.
  * Mobile-first, iOS/Android tested, cross-platform ready.
  */
 
@@ -146,6 +146,8 @@ const App = {
                 GitHubAPI.config.repo = ghRepo;
                 GitHubAPI.config.path = 'MoneyWise/data.enc';
             }
+            // Debug log — helps identify typos in repo name
+            console.log('[MoneyWise] Login attempt with config:', { username: GitHubAPI.config.username, repo: GitHubAPI.config.repo, path: GitHubAPI.config.path });
 
             if (!GitHubAPI.isConfigured()) { this.showLoginError('GitHub connection required. Expand the GitHub section and fill in your details.'); return; }
 

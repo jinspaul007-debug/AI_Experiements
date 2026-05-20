@@ -1,10 +1,7 @@
 /**
- * GitHub API + Encryption Layer v4.3
+ * GitHub API + Encryption Layer v4.4
  * Security: All passwords hashed with SHA-256 (one-way, non-reversible).
- * Fixed: Multi-device sync, proper SHA tracking, first-time setup flow.
- * Fixed v4.2: 404 ambiguity bug.
- * Fixed v4.3: Chrome/cross-browser fetch caching issue. Removed testConnection 
- *   pre-check (caused failures). All fetches now use cache:'no-store' and 'Bearer' auth.
+ * Fixed v4.4: Config value trimming, auth on repo check, spellcheck-safe inputs.
  */
 
 /** Hash a password with SHA-256 using CryptoJS — one-way, non-reversible */
@@ -41,22 +38,23 @@ function migratePasswordsToHashed(data) {
 
 const GitHubAPI = {
     config: {
-        token: localStorage.getItem('gh_token') || '',
-        username: localStorage.getItem('gh_username') || '',
-        repo: localStorage.getItem('gh_repo') || '',
-        path: localStorage.getItem('gh_path') || 'MoneyWise/data.enc',
+        token: (localStorage.getItem('gh_token') || '').trim(),
+        username: (localStorage.getItem('gh_username') || '').trim(),
+        repo: (localStorage.getItem('gh_repo') || '').trim(),
+        path: (localStorage.getItem('gh_path') || 'MoneyWise/data.enc').trim(),
         encKey: '',
         sha: null
     },
 
     saveConfig(token, username, repo, path) {
-        this.config.token = token;
-        this.config.username = username;
-        this.config.repo = repo;
-        this.config.path = path || 'MoneyWise/data.enc';
-        localStorage.setItem('gh_token', token);
-        localStorage.setItem('gh_username', username);
-        localStorage.setItem('gh_repo', repo);
+        // Aggressively trim all values to prevent whitespace issues
+        this.config.token = (token || '').trim();
+        this.config.username = (username || '').trim();
+        this.config.repo = (repo || '').trim();
+        this.config.path = (path || 'MoneyWise/data.enc').trim();
+        localStorage.setItem('gh_token', this.config.token);
+        localStorage.setItem('gh_username', this.config.username);
+        localStorage.setItem('gh_repo', this.config.repo);
         localStorage.setItem('gh_path', this.config.path);
     },
 
@@ -143,16 +141,22 @@ const GitHubAPI = {
 
         if (!data) {
             // Got 404 — but is it because the FILE doesn't exist, or the REPO/TOKEN is wrong?
-            // For a public repo, we can verify by checking if the repo endpoint is accessible.
-            // This is only called when we get a 404, not on every login.
+            // Verify by checking the repo endpoint WITH auth headers (avoids rate-limiting).
             try {
                 const repoUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
-                const repoCheck = await fetch(repoUrl, { cache: 'no-store' }); // No auth needed for public repo
+                const repoCheck = await fetch(repoUrl, {
+                    headers: this._headers(),
+                    cache: 'no-store'
+                });
                 if (!repoCheck.ok) {
-                    throw new Error(`Repository "${this.config.username}/${this.config.repo}" not found. Check your GitHub username and repository name.`);
+                    const status = repoCheck.status;
+                    if (status === 401 || status === 403) {
+                        throw new Error(`Access denied (${status}). Your PAT token may have expired or lacks permissions.`);
+                    }
+                    throw new Error(`Repository "${this.config.username}/${this.config.repo}" not found (${status}). Check your GitHub username and repository name — spelling must match EXACTLY.`);
                 }
             } catch (repoErr) {
-                if (repoErr.message.includes('Repository')) throw repoErr;
+                if (repoErr.message.includes('Repository') || repoErr.message.includes('Access denied')) throw repoErr;
                 // Network error checking repo — assume repo is fine, report as no data
                 console.warn('Could not verify repo, assuming data.enc does not exist yet.');
             }

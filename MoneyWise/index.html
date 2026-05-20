@@ -48,16 +48,16 @@
                     <div id="setup-fields" style="margin-top: 0.8rem;">
                         <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                             <label style="font-size:0.78rem;">Personal Access Token (PAT)</label>
-                            <input type="password" id="loginToken" class="form-input" placeholder="ghp_xxxxxxxxxxxx" autocapitalize="none" autocorrect="off">
+                            <input type="password" id="loginToken" class="form-input" placeholder="ghp_xxxxxxxxxxxx" autocapitalize="none" autocorrect="off" autocomplete="off">
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                             <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                                 <label style="font-size:0.78rem;">GitHub Username</label>
-                                <input type="text" id="loginGhUser" class="form-input" placeholder="username" autocapitalize="none" autocorrect="off">
+                                <input type="text" id="loginGhUser" class="form-input" placeholder="jinspaul007-debug" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
                             </div>
                             <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                                 <label style="font-size:0.78rem;">Repository Name</label>
-                                <input type="text" id="loginGhRepo" class="form-input" placeholder="repo-name" autocapitalize="none" autocorrect="off">
+                                <input type="text" id="loginGhRepo" class="form-input" placeholder="AI_Experiements" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
                             </div>
                         </div>
                     </div>
@@ -717,9 +717,9 @@
         </div>
     </div>
 
-    <script src="./js/api.js?v=43"></script>
-    <script src="./js/analytics.js?v=43"></script>
-    <script src="./js/app.js?v=43"></script>
+    <script src="./js/api.js?v=44"></script>
+    <script src="./js/analytics.js?v=44"></script>
+    <script src="./js/app.js?v=44"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(reg => {
