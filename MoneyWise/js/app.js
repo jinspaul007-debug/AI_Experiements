@@ -107,10 +107,10 @@ const App = {
         if(spl) { spl.style.opacity = '0'; setTimeout(() => { spl.style.display = 'none'; }, 400); }
         const ls = document.getElementById('loginScreen');
         ls.style.display = 'flex';
-        // Pre-fill saved GitHub config
-        document.getElementById('loginToken').value = GitHubAPI.config.token || '';
-        document.getElementById('loginGhUser').value = GitHubAPI.config.username || '';
-        document.getElementById('loginGhRepo').value = GitHubAPI.config.repo || '';
+        // Only override pre-filled HTML defaults if localStorage has saved values
+        if (GitHubAPI.config.token) document.getElementById('loginToken').value = GitHubAPI.config.token;
+        if (GitHubAPI.config.username) document.getElementById('loginGhUser').value = GitHubAPI.config.username;
+        if (GitHubAPI.config.repo) document.getElementById('loginGhRepo').value = GitHubAPI.config.repo;
         const sf = document.getElementById('setup-fields');
         const ss = document.getElementById('setup-status');
         if (GitHubAPI.isConfigured()) {

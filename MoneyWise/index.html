@@ -32,13 +32,19 @@
     </div>
 
     <!-- LOGIN SCREEN -->
+    <style>
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 42px !important; }
+        .pw-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 6px; font-size: 1rem; line-height: 1; z-index: 2; }
+        .pw-toggle:hover { color: var(--text-primary); }
+    </style>
     <div class="login-overlay" id="loginScreen" style="display: none;">
         <div class="login-box">
             <div class="login-logo"><i class="fa-solid fa-shield-halved" style="color:white"></i></div>
             <h2 style="margin-bottom: 5px;">MoneyWise</h2>
             <p class="text-muted" style="margin-bottom: 1.5rem;">AES-256 Encrypted Family Finance</p>
             
-            <!-- GitHub Setup (shown when not configured) -->
+            <!-- GitHub Setup -->
             <div id="login-setup-section">
                 <div style="background: var(--bg-elevated); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.2rem;">
                     <div class="flex-between" style="cursor:pointer;" onclick="document.getElementById('setup-fields').style.display = document.getElementById('setup-fields').style.display === 'none' ? 'block' : 'none'">
@@ -48,16 +54,19 @@
                     <div id="setup-fields" style="margin-top: 0.8rem;">
                         <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                             <label style="font-size:0.78rem;">Personal Access Token (PAT)</label>
-                            <input type="password" id="loginToken" class="form-input" placeholder="ghp_xxxxxxxxxxxx" autocapitalize="none" autocorrect="off" autocomplete="off">
+                            <div class="pw-wrap">
+                                <input type="password" id="loginToken" class="form-input" placeholder="ghp_xxxxxxxxxxxx" autocapitalize="none" autocorrect="off" autocomplete="off">
+                                <button type="button" class="pw-toggle" onclick="togglePw('loginToken',this)" tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                            </div>
                         </div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                             <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                                 <label style="font-size:0.78rem;">GitHub Username</label>
-                                <input type="text" id="loginGhUser" class="form-input" placeholder="jinspaul007-debug" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
+                                <input type="text" id="loginGhUser" class="form-input" value="jinspaul007-debug" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
                             </div>
                             <div class="form-group text-left" style="margin-bottom: 0.7rem;">
                                 <label style="font-size:0.78rem;">Repository Name</label>
-                                <input type="text" id="loginGhRepo" class="form-input" placeholder="AI_Experiements" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
+                                <input type="text" id="loginGhRepo" class="form-input" value="AI_Experiements" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">
                             </div>
                         </div>
                     </div>
@@ -71,11 +80,17 @@
                 </div>
                 <div class="form-group text-left">
                     <label>Password</label>
-                    <input type="password" id="loginPass" class="form-input" required autocapitalize="none">
+                    <div class="pw-wrap">
+                        <input type="password" id="loginPass" class="form-input" required autocapitalize="none">
+                        <button type="button" class="pw-toggle" onclick="togglePw('loginPass',this)" tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                    </div>
                 </div>
                 <div class="form-group text-left">
                     <label>Family Encryption Key</label>
-                    <input type="password" id="loginKey" class="form-input" placeholder="Your family secret passphrase" required autocapitalize="none">
+                    <div class="pw-wrap">
+                        <input type="password" id="loginKey" class="form-input" placeholder="Your family secret passphrase" required autocapitalize="none">
+                        <button type="button" class="pw-toggle" onclick="togglePw('loginKey',this)" tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                    </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top: 0.3rem;">
                     <input type="checkbox" id="loginRememberKey" style="width:18px; height:18px; min-width:18px;">
@@ -88,6 +103,7 @@
             </form>
         </div>
     </div>
+    <script>function togglePw(id,btn){var i=document.getElementById(id);var ic=btn.querySelector('i');if(i.type==='password'){i.type='text';ic.className='fa-solid fa-eye-slash';}else{i.type='password';ic.className='fa-solid fa-eye';}}</script>
 
     <!-- App Shell -->
     <div class="app-container" id="appMain" style="display: none;">
@@ -717,9 +733,9 @@
         </div>
     </div>
 
-    <script src="./js/api.js?v=44"></script>
-    <script src="./js/analytics.js?v=44"></script>
-    <script src="./js/app.js?v=44"></script>
+    <script src="./js/api.js?v=45"></script>
+    <script src="./js/analytics.js?v=45"></script>
+    <script src="./js/app.js?v=45"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(reg => {
