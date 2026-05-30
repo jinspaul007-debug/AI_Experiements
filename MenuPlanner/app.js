@@ -412,6 +412,12 @@ function login() {
 
     // Initialize sync UI state (shows header icon and save buttons if linked)
     updateSyncStatusUI();
+    
+    // Auto-pull from cloud on login to get latest updates
+    const settings = getStorage('sync_settings', {});
+    if (settings.pat && settings.username && settings.repo) {
+      pullFromCloud(true);
+    }
 
     // Set initial week to current week
     curWeekKey = getWeekKey(new Date());

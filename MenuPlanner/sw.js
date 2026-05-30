@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menuplanner-v3';
+const CACHE_NAME = 'menuplanner-v4';
 const ASSETS = [
   './',
   './index.html',
