@@ -593,7 +593,23 @@ function deleteDish(idx) {
 
 // --- Weekly Planner ---
 function initPlanner() {
+  migratePantryData();
   refreshPlanner();
+}
+
+function migratePantryData() {
+  const pantry = getStorage('pantry', []);
+  let modified = false;
+  DEFAULT_PANTRY_ITEMS.forEach(defaultItem => {
+    if (!pantry.find(p => p.name.toLowerCase() === defaultItem.name.toLowerCase())) {
+      pantry.push(defaultItem);
+      modified = true;
+    }
+  });
+  if (modified) {
+    setStorage('pantry', pantry);
+    triggerAutoSync();
+  }
 }
 
 function changeWeek(delta) {
@@ -1044,31 +1060,12 @@ function generatePlannerIngredients() {
 
 function refreshShoppingPage() {
   const shopWeekEl = document.getElementById('shoppingWeekTitle');
-  if (shopWeekEl) shopWeekEl.textContent = curWeekKey;
+  if (shopWeekEl) {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    shopWeekEl.innerHTML = `${curWeekKey} &mdash; <span style="color:var(--accent-gold);">${today}</span>`;
+  }
 
   const shop = getActiveShoppingList();
-  
-  // Auto-inject planner ingredients into Daily list if they don't exist
-  const plannerIng = generatePlannerIngredients();
-  let modified = false;
-  Object.entries(plannerIng).forEach(([name, qty]) => {
-    const id = 'planner_' + name.toLowerCase();
-    const exists = shop.daily.find(x => x.id === id) || shop.pantry.find(x => x.id === id);
-    if (!exists) {
-      shop.daily.push({
-        id: id,
-        name: name,
-        type: 'daily',
-        category: 'Planner',
-        requiredQty: qty,
-        purchasedQty: 0,
-        unit: 'pcs',
-        status: 'pending'
-      });
-      modified = true;
-    }
-  });
-  if (modified) saveActiveShoppingList(shop);
 
   const checklistContainer = document.getElementById('shoppingChecklist');
   if (!checklistContainer) return;
@@ -1120,6 +1117,39 @@ function refreshShoppingPage() {
     if (writeArea) writeArea.style.display = 'none';
   } else {
     if (writeArea) writeArea.style.display = 'block';
+  }
+
+  // Render Planner Suggestions (only in Daily tab)
+  const plannerSuggestionsContainer = document.getElementById('shopPlannerSuggestionsContainer');
+  const plannerSuggestionsGrid = document.getElementById('shopPlannerSuggestionsGrid');
+  if (plannerSuggestionsContainer && plannerSuggestionsGrid) {
+    if (currentShopTab === 'daily' && curUser && curUser.role !== 'viewer') {
+      const plannerIng = generatePlannerIngredients();
+      const existingNames = shop.daily.map(it => it.name.toLowerCase());
+      
+      const suggestions = Object.keys(plannerIng).filter(name => !existingNames.includes(name.toLowerCase()));
+      
+      if (suggestions.length > 0) {
+        plannerSuggestionsContainer.style.display = 'block';
+        plannerSuggestionsGrid.innerHTML = '';
+        suggestions.forEach(name => {
+          const pill = document.createElement('div');
+          pill.className = 'shop-suggestion-pill';
+          pill.innerHTML = `<span>${esc(name)}</span>`;
+          pill.onclick = () => {
+            document.getElementById('shopNewItem').value = name;
+            document.getElementById('shopNewType').value = 'daily';
+            document.getElementById('shopNewQty').value = plannerIng[name] || 1;
+            document.getElementById('shopNewUnit').value = 'pcs';
+          };
+          plannerSuggestionsGrid.appendChild(pill);
+        });
+      } else {
+        plannerSuggestionsContainer.style.display = 'none';
+      }
+    } else {
+      plannerSuggestionsContainer.style.display = 'none';
+    }
   }
 
   // Render Pantry Suggestions (only in Pantry tab)

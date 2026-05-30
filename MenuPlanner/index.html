@@ -208,8 +208,17 @@
         </div>
       </div>
 
-      <!-- Suggested from Pantry -->
-      <div class="cd" id="shopSuggestionsContainer" style="display:none;">
+      <!-- Suggested from Planner (Daily Tab Only) -->
+      <div class="cd" id="shopPlannerSuggestionsContainer" style="display:none; border-left: 4px solid var(--accent-blue);">
+        <div class="ct">📅 Suggested from Planner</div>
+        <p class="section-desc">Ingredients needed for this week's scheduled menu. Click to add them to your Daily list.</p>
+        <div class="pantry-suggestions-grid" id="shopPlannerSuggestionsGrid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Suggested from Pantry (Pantry Tab Only) -->
+      <div class="cd" id="shopSuggestionsContainer" style="display:none; border-left: 4px solid var(--accent-gold);">
         <div class="ct">💡 Suggested for Pantry Restock</div>
         <p class="section-desc">These items are running low or out of stock in your pantry. Click to add them to your Pantry Restock list.</p>
         <div class="pantry-suggestions-grid" id="shopSuggestionsGrid">
