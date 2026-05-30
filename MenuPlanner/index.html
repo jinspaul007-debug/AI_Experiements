@@ -140,42 +140,78 @@
     <!-- PAGE: SHOPPING -->
     <section class="pg" id="pgShopping">
       <div class="cd">
-        <div class="ct">🛒 Shopping List</div>
-        <p class="section-desc">Items to buy for the selected week. Items are automatically generated based on the scheduled menu dishes, plus any custom additions.</p>
+        <div class="ct">🛒 Shopping Lists</div>
+        <p class="section-desc">Manage your grocery runs. Keep daily/weekly perishables separate from bulk pantry restocks. Partially purchased items roll over automatically.</p>
         
         <div class="week-display-compact">
-          Current View: <strong id="shoppingWeekTitle">Week 22, 2026</strong>
+          Menu Generation Source: <strong id="shoppingWeekTitle">Week 22, 2026</strong>
         </div>
       </div>
 
       <!-- Add custom shopping item -->
       <div class="cd" id="shopAddContainer">
         <div class="ct">➕ Add Custom Item</div>
+        <div class="row" style="margin-bottom: 8px;">
+          <div class="col" style="flex: 2;">
+            <label class="lbl">Item Name</label>
+            <input type="text" class="inp" id="shopNewItem" placeholder="e.g. Apples, Rice, Milk">
+          </div>
+          <div class="col">
+            <label class="lbl">List Type</label>
+            <select class="sel" id="shopNewType">
+              <option value="daily">Daily Groceries</option>
+              <option value="pantry">Pantry Restock</option>
+            </select>
+          </div>
+        </div>
         <div class="row" style="margin-bottom: 0;">
-          <input type="text" class="inp" id="shopNewItem" placeholder="e.g. Coconut Oil, Milk, Eggs" style="margin-bottom: 0;">
-          <button class="btn btn-p" onclick="addShoppingItem()" style="flex-shrink: 0;">Add</button>
+          <div class="col">
+            <label class="lbl">Required Qty</label>
+            <input type="number" class="inp" id="shopNewQty" value="1" min="0.1" step="any">
+          </div>
+          <div class="col">
+            <label class="lbl">Unit</label>
+            <select class="sel" id="shopNewUnit">
+              <option value="pcs">pcs</option>
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="L">L</option>
+              <option value="ml">ml</option>
+              <option value="pkts">pkts</option>
+              <option value="bunch">bunch</option>
+            </select>
+          </div>
+          <div class="col" style="display:flex; align-items:flex-end;">
+            <button class="btn btn-p" onclick="addShoppingItem()" style="width: 100%;">Add Item</button>
+          </div>
         </div>
       </div>
 
-      <!-- Shopping list checkboxes -->
-      <div class="cd">
-        <div class="ct" style="justify-content: space-between;">
-          <span>📦 Shopping Checklist</span>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
-            <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Clear Checked</button>
-          </div>
+      <!-- Shopping Lists Tabs -->
+      <div class="cd" style="padding:0; overflow:hidden;">
+        <div style="display:flex; border-bottom: 1px solid var(--border);">
+          <div class="shop-tab active" id="tabDaily" onclick="switchShopTab('daily')" style="flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:600; border-right:1px solid var(--border); transition: 0.2s;">🛍️ Daily Groceries</div>
+          <div class="shop-tab" id="tabPantry" onclick="switchShopTab('pantry')" style="flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:600; opacity:0.6; transition: 0.2s;">📦 Pantry Restock</div>
         </div>
-        
-        <div class="shopping-sections" id="shoppingChecklist">
-          <!-- Populated dynamically -->
+        <div style="padding: 15px;">
+          <div class="ct" style="justify-content: space-between;">
+            <span id="shopActiveTitle">🛍️ Daily Groceries List</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
+              <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Rollover & Clear</button>
+            </div>
+          </div>
+          
+          <div class="shopping-sections" id="shoppingChecklist">
+            <!-- Populated dynamically -->
+          </div>
         </div>
       </div>
 
       <!-- Suggested from Pantry -->
       <div class="cd" id="shopSuggestionsContainer" style="display:none;">
-        <div class="ct">💡 Suggested from Pantry</div>
-        <p class="section-desc">These items are running low or out of stock in your pantry.</p>
+        <div class="ct">💡 Suggested for Pantry Restock</div>
+        <p class="section-desc">These items are running low or out of stock in your pantry. Click to add them to your Pantry Restock list.</p>
         <div class="pantry-suggestions-grid" id="shopSuggestionsGrid">
           <!-- Populated dynamically -->
         </div>

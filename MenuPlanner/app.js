@@ -988,134 +988,133 @@ function addAndSelectCustomDish() {
   selectSlotValue(rawName);
 }
 
-// --- Shopping List ---
-function getShoppingState(weekKey) {
-  const allShop = getStorage('shopping_lists', {});
-  if (!allShop[weekKey]) {
-    allShop[weekKey] = {
-      purchased: [],
-      custom: []
-    };
-    setStorage('shopping_lists', allShop);
+// --- Advanced Shopping List ---
+let currentShopTab = 'daily';
+
+function switchShopTab(tab) {
+  currentShopTab = tab;
+  document.querySelectorAll('.shop-tab').forEach(el => {
+    el.classList.remove('active');
+    el.style.opacity = '0.6';
+    el.style.borderRight = '1px solid var(--border)';
+  });
+  const activeTab = document.getElementById(tab === 'daily' ? 'tabDaily' : 'tabPantry');
+  if (activeTab) {
+    activeTab.classList.add('active');
+    activeTab.style.opacity = '1';
+    activeTab.style.borderRight = 'none';
   }
-  return allShop[weekKey];
+  const title = document.getElementById('shopActiveTitle');
+  if (title) title.textContent = tab === 'daily' ? '🛍️ Daily Groceries List' : '📦 Pantry Restock List';
+  refreshShoppingPage();
 }
 
-function saveShoppingState(weekKey, state) {
-  const allShop = getStorage('shopping_lists', {});
-  allShop[weekKey] = state;
-  setStorage('shopping_lists', allShop);
+function getActiveShoppingList() {
+  const shop = getStorage('active_shopping_list', null);
+  if (!shop || Array.isArray(shop)) {
+    const defaultState = { daily: [], pantry: [] };
+    setStorage('active_shopping_list', defaultState);
+    return defaultState;
+  }
+  return shop;
+}
+
+function saveActiveShoppingList(state) {
+  setStorage('active_shopping_list', state);
   triggerAutoSync();
 }
 
-function refreshShoppingPage() {
-  const shopWeekEl = document.getElementById('shoppingWeekTitle');
-  if (shopWeekEl) shopWeekEl.textContent = curWeekKey;
-
+function generatePlannerIngredients() {
   const weekData = getWeekData(curWeekKey);
-  const shopState = getShoppingState(curWeekKey);
-
   const ingredientsMap = {};
-
   weekData.forEach(day => {
     for (const [mealKey, meal] of Object.entries(day.meals)) {
       for (const [slotKey, val] of Object.entries(meal)) {
         if (!val) continue;
-
         let items = DISH_INGREDIENTS[val] || [];
-        if (items.length === 0) {
-          items = [val];
-        }
-
+        if (items.length === 0) items = [val];
         items.forEach(it => {
           ingredientsMap[it] = (ingredientsMap[it] || 0) + 1;
         });
       }
     }
   });
+  return ingredientsMap;
+}
+
+function refreshShoppingPage() {
+  const shopWeekEl = document.getElementById('shoppingWeekTitle');
+  if (shopWeekEl) shopWeekEl.textContent = curWeekKey;
+
+  const shop = getActiveShoppingList();
+  
+  // Auto-inject planner ingredients into Daily list if they don't exist
+  const plannerIng = generatePlannerIngredients();
+  let modified = false;
+  Object.entries(plannerIng).forEach(([name, qty]) => {
+    const id = 'planner_' + name.toLowerCase();
+    const exists = shop.daily.find(x => x.id === id) || shop.pantry.find(x => x.id === id);
+    if (!exists) {
+      shop.daily.push({
+        id: id,
+        name: name,
+        type: 'daily',
+        category: 'Planner',
+        requiredQty: qty,
+        purchasedQty: 0,
+        unit: 'pcs',
+        status: 'pending'
+      });
+      modified = true;
+    }
+  });
+  if (modified) saveActiveShoppingList(shop);
 
   const checklistContainer = document.getElementById('shoppingChecklist');
   if (!checklistContainer) return;
   checklistContainer.innerHTML = '';
 
-  const autoItems = Object.entries(ingredientsMap).map(([name, qty]) => ({
-    name,
-    qty,
-    custom: false,
-    checked: shopState.purchased.includes(name)
-  }));
+  const activeItems = shop[currentShopTab] || [];
+  
+  if (activeItems.length === 0) {
+    checklistContainer.innerHTML = '<p class="empty-state-msg">📋 No items in this list.</p>';
+  } else {
+    const renderItem = (it) => {
+      const div = document.createElement('div');
+      const isComplete = it.requiredQty > 0 && it.purchasedQty >= it.requiredQty;
+      const isPartial = it.purchasedQty > 0 && it.purchasedQty < it.requiredQty;
+      
+      div.className = `shop-item-row ${isComplete ? 'checked' : ''} ${isPartial ? 'partial' : ''}`;
+      
+      let statusBadge = '';
+      if (isComplete) statusBadge = '<span class="badge badge-green" style="font-size:10px;">Done</span>';
+      else if (isPartial) statusBadge = '<span class="badge badge-amber" style="font-size:10px;">Partial</span>';
 
-  const customItems = shopState.custom.map(it => ({
-    name: it.name,
-    qty: 1,
-    custom: true,
-    checked: it.bought
-  }));
+      div.innerHTML = `
+        <div style="display:flex; align-items:center; gap: 12px; flex:1;">
+          <div class="shop-chk" onclick="toggleShoppingItem('${it.id}', ${isComplete})"></div>
+          <div style="flex:1;">
+            <div class="shop-item-text" style="font-size:14px; font-weight:600;">${esc(it.name)} ${statusBadge}</div>
+            <div style="font-size:11px; color:var(--text-sub);">Cat: ${esc(it.category || 'Custom')}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 8px;">
+          <div style="display:flex; flex-direction:column; align-items:flex-end; font-size:12px;">
+            <span><strong style="color:var(--text-main);">${it.purchasedQty}</strong> / ${it.requiredQty} ${esc(it.unit)}</span>
+          </div>
+          ${curUser && curUser.role !== 'viewer' ? `
+            <button class="pi-action-btn" onclick="promptUpdateQty('${it.id}')" title="Update Qty">✏️</button>
+            <button class="pi-action-btn" onclick="deleteShoppingItem('${it.id}')" title="Delete">🗑️</button>
+          ` : ''}
+        </div>
+      `;
+      return div;
+    };
 
-  const allItems = [...autoItems, ...customItems];
-  const activeItems = allItems.filter(x => !x.checked);
-  const checkedItems = allItems.filter(x => x.checked);
-
-  if (allItems.length === 0) {
-    checklistContainer.innerHTML = '<p class="empty-state-msg">📋 No items needed. Start planning meals in the Planner tab!</p>';
-    return;
+    activeItems.forEach(it => checklistContainer.appendChild(renderItem(it)));
   }
 
-  const pantry = getStorage('pantry', DEFAULT_PANTRY_ITEMS);
-  const getStockBadge = (name) => {
-    const pItem = pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
-    if (pItem) {
-      if (pItem.qty <= 0) return '<span class="badge badge-red" style="margin-left:8px;font-size:10px;">Out of Stock</span>';
-      if (pItem.qty <= pItem.minStock) return '<span class="badge badge-amber" style="margin-left:8px;font-size:10px;">Low Stock</span>';
-    }
-    return '';
-  };
-
-  const renderItem = (it) => {
-    const div = document.createElement('div');
-    div.className = `shop-item-row${it.checked ? ' checked' : ''}`;
-    div.onclick = () => toggleShoppingItem(it.name, it.custom);
-
-    div.innerHTML = `
-      <div class="shop-chk"></div>
-      <div class="shop-item-text">${esc(it.name)} ${!it.checked ? getStockBadge(it.name) : ''}</div>
-      ${it.qty > 1 && !it.checked ? `<span class="shop-qty-badge">${it.qty}x</span>` : ''}
-    `;
-
-    if (it.custom && curUser && curUser.role !== 'viewer') {
-      const delBtn = document.createElement('button');
-      delBtn.className = 'shop-item-del';
-      delBtn.innerHTML = '✕';
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        removeCustomShoppingItem(it.name);
-      };
-      div.appendChild(delBtn);
-    }
-
-    return div;
-  };
-
-  if (activeItems.length > 0) {
-    const activeSection = document.createElement('div');
-    activeSection.className = 'shop-items-grid';
-    activeItems.forEach(it => activeSection.appendChild(renderItem(it)));
-    checklistContainer.appendChild(activeSection);
-  }
-
-  if (checkedItems.length > 0) {
-    const divider = document.createElement('div');
-    divider.className = 'shop-cat-title';
-    divider.style.marginTop = '15px';
-    divider.textContent = `✅ Purchased (${checkedItems.length})`;
-    checklistContainer.appendChild(divider);
-
-    const checkedSection = document.createElement('div');
-    checkedSection.className = 'shop-items-grid';
-    checkedItems.forEach(it => checkedSection.appendChild(renderItem(it)));
-    checklistContainer.appendChild(checkedSection);
-  }
-
+  // Handle Write Area & Viewer Mode
   const writeArea = document.getElementById('shopAddContainer');
   if (curUser && curUser.role === 'viewer') {
     if (writeArea) writeArea.style.display = 'none';
@@ -1123,102 +1122,145 @@ function refreshShoppingPage() {
     if (writeArea) writeArea.style.display = 'block';
   }
 
-  // Handle Pantry Suggestions
+  // Render Pantry Suggestions (only in Pantry tab)
   const suggestionsContainer = document.getElementById('shopSuggestionsContainer');
   const suggestionsGrid = document.getElementById('shopSuggestionsGrid');
   if (suggestionsContainer && suggestionsGrid) {
-    const existingNames = activeItems.map(it => it.name.toLowerCase());
-    const suggestions = pantry.filter(p => {
-      if (p.qty > p.minStock) return false;
-      if (existingNames.includes(p.name.toLowerCase())) return false;
-      return true;
-    });
-
-    if (suggestions.length > 0 && curUser && curUser.role !== 'viewer') {
-      suggestionsContainer.style.display = 'block';
-      suggestionsGrid.innerHTML = '';
-      suggestions.forEach(sug => {
-        const pill = document.createElement('div');
-        pill.className = 'shop-suggestion-pill';
-        pill.innerHTML = `<span>${esc(sug.name)}</span> <span class="badge ${sug.qty === 0 ? 'badge-red' : 'badge-amber'}">${sug.qty === 0 ? 'Out' : 'Low'}</span>`;
-        pill.onclick = () => {
-          const inputEl = document.getElementById('shopNewItem');
-          if (inputEl) inputEl.value = sug.name;
-          addShoppingItem();
-        };
-        suggestionsGrid.appendChild(pill);
+    if (currentShopTab === 'pantry' && curUser && curUser.role !== 'viewer') {
+      const pantry = getStorage('pantry', DEFAULT_PANTRY_ITEMS);
+      const existingNames = shop.pantry.map(it => it.name.toLowerCase());
+      const suggestions = pantry.filter(p => {
+        if (p.qty > p.minStock) return false;
+        if (existingNames.includes(p.name.toLowerCase())) return false;
+        return true;
       });
+
+      if (suggestions.length > 0) {
+        suggestionsContainer.style.display = 'block';
+        suggestionsGrid.innerHTML = '';
+        suggestions.forEach(sug => {
+          const pill = document.createElement('div');
+          pill.className = 'shop-suggestion-pill';
+          pill.innerHTML = `<span>${esc(sug.name)}</span> <span class="badge ${sug.qty === 0 ? 'badge-red' : 'badge-amber'}">${sug.qty === 0 ? 'Out' : 'Low'}</span>`;
+          pill.onclick = () => {
+            document.getElementById('shopNewItem').value = sug.name;
+            document.getElementById('shopNewType').value = 'pantry';
+            document.getElementById('shopNewQty').value = Math.max(1, sug.minStock - sug.qty + 1);
+            document.getElementById('shopNewUnit').value = sug.unit || 'pcs';
+          };
+          suggestionsGrid.appendChild(pill);
+        });
+      } else {
+        suggestionsContainer.style.display = 'none';
+      }
     } else {
       suggestionsContainer.style.display = 'none';
     }
   }
 }
 
-function toggleShoppingItem(name, isCustom) {
-  if (curUser && curUser.role === 'viewer') return;
-
-  const shopState = getShoppingState(curWeekKey);
-
-  if (isCustom) {
-    const item = shopState.custom.find(x => x.name === name);
-    if (item) item.bought = !item.bought;
-  } else {
-    const idx = shopState.purchased.indexOf(name);
-    if (idx > -1) {
-      shopState.purchased.splice(idx, 1);
-    } else {
-      shopState.purchased.push(name);
-    }
-  }
-
-  saveShoppingState(curWeekKey, shopState);
-  refreshShoppingPage();
-}
-
 function addShoppingItem() {
-  const inputEl = document.getElementById('shopNewItem');
-  const name = inputEl ? inputEl.value.trim() : '';
-  if (!name) {
-    toast('⚠️ Enter an item name');
+  const nameEl = document.getElementById('shopNewItem');
+  const typeEl = document.getElementById('shopNewType');
+  const qtyEl = document.getElementById('shopNewQty');
+  const unitEl = document.getElementById('shopNewUnit');
+
+  const name = nameEl ? nameEl.value.trim() : '';
+  const type = typeEl ? typeEl.value : 'daily';
+  const qty = qtyEl ? parseFloat(qtyEl.value) : 1;
+  const unit = unitEl ? unitEl.value : 'pcs';
+
+  if (!name || isNaN(qty) || qty <= 0) {
+    toast('⚠️ Enter a valid item name and quantity');
     return;
   }
 
-  const shopState = getShoppingState(curWeekKey);
-  if (shopState.custom.find(x => x.name.toLowerCase() === name.toLowerCase())) {
-    toast('⚠️ Custom item already on shopping list');
-    return;
-  }
+  const shop = getActiveShoppingList();
+  const id = 'custom_' + Date.now();
+  
+  shop[type].push({
+    id, name, type, category: 'Custom',
+    requiredQty: qty, purchasedQty: 0, unit, status: 'pending'
+  });
 
-  shopState.custom.push({ name, bought: false });
-  saveShoppingState(curWeekKey, shopState);
-  if (inputEl) inputEl.value = '';
-  refreshShoppingPage();
-  toast(`🛒 Added: ${esc(name)}`);
+  saveActiveShoppingList(shop);
+  nameEl.value = '';
+  qtyEl.value = '1';
+  toast(`✅ Added to ${type === 'daily' ? 'Daily' : 'Pantry'} list`);
+  
+  if (currentShopTab !== type) switchShopTab(type);
+  else refreshShoppingPage();
 }
 
-function removeCustomShoppingItem(name) {
-  const shopState = getShoppingState(curWeekKey);
-  shopState.custom = shopState.custom.filter(x => x.name !== name);
-  saveShoppingState(curWeekKey, shopState);
+function promptUpdateQty(id) {
+  if (curUser && curUser.role === 'viewer') return;
+  const shop = getActiveShoppingList();
+  const item = shop[currentShopTab].find(x => x.id === id);
+  if (!item) return;
+
+  const res = prompt(`Enter purchased quantity for ${item.name} (Required: ${item.requiredQty} ${item.unit}):`, item.purchasedQty);
+  if (res === null) return;
+  
+  const pQty = parseFloat(res);
+  if (isNaN(pQty) || pQty < 0) {
+    toast('⚠️ Invalid quantity');
+    return;
+  }
+
+  item.purchasedQty = pQty;
+  saveActiveShoppingList(shop);
+  refreshShoppingPage();
+}
+
+function toggleShoppingItem(id, currentlyComplete) {
+  if (curUser && curUser.role === 'viewer') return;
+  const shop = getActiveShoppingList();
+  const item = shop[currentShopTab].find(x => x.id === id);
+  if (!item) return;
+
+  if (currentlyComplete) {
+    item.purchasedQty = 0; // Uncheck
+  } else {
+    item.purchasedQty = item.requiredQty; // Mark complete
+  }
+
+  saveActiveShoppingList(shop);
+  refreshShoppingPage();
+}
+
+function deleteShoppingItem(id) {
+  if (curUser && curUser.role === 'viewer') return;
+  const shop = getActiveShoppingList();
+  shop[currentShopTab] = shop[currentShopTab].filter(x => x.id !== id);
+  saveActiveShoppingList(shop);
   refreshShoppingPage();
 }
 
 function clearPurchasedItems() {
   if (curUser && curUser.role === 'viewer') return;
+  if (!confirm(`Are you sure you want to clear completed items? Partially purchased items will roll over with their remaining quantities.`)) return;
 
-  const shopState = getShoppingState(curWeekKey);
-  if (shopState.purchased.length === 0 && shopState.custom.filter(x => x.bought).length === 0) {
-    toast('⚠️ No checked items to clear');
-    return;
-  }
+  const shop = getActiveShoppingList();
+  let clearedCount = 0;
 
-  showConfirm('Clear Checked Items', 'This will clear all completed checklist items. Continue?', () => {
-    shopState.purchased = [];
-    shopState.custom = shopState.custom.filter(x => !x.bought);
-    saveShoppingState(curWeekKey, shopState);
-    refreshShoppingPage();
-    toast('🧹 Completed items cleared');
+  ['daily', 'pantry'].forEach(tab => {
+    shop[tab] = shop[tab].filter(item => {
+      if (item.purchasedQty >= item.requiredQty) {
+        clearedCount++;
+        return false; // Remove completed
+      } else if (item.purchasedQty > 0) {
+        // Rollover partial
+        item.requiredQty = item.requiredQty - item.purchasedQty;
+        item.purchasedQty = 0;
+        return true;
+      }
+      return true; // Keep unpurchased
+    });
   });
+
+  saveActiveShoppingList(shop);
+  refreshShoppingPage();
+  toast(`🧹 Cleared ${clearedCount} completed items. Partial items rolled over.`);
 }
 
 // --- Settings ---
@@ -1521,7 +1563,8 @@ function getAllLocalData() {
   return {
     dishes: getDbDishes(),
     weekly_plans: getStorage('weekly_plans', {}),
-    shopping_lists: getStorage('shopping_lists', {}),
+    shopping_lists: getStorage('shopping_lists', {}), // Keep for legacy
+    active_shopping_list: getStorage('active_shopping_list', { daily: [], pantry: [] }),
     pantry: getStorage('pantry', []),
     timestamp: Date.now()
   };
@@ -1538,6 +1581,10 @@ function mergeRemoteData(remote) {
     const localShop = getStorage('shopping_lists', {});
     const mergedShop = { ...localShop, ...remote.shopping_lists };
     setStorage('shopping_lists', mergedShop);
+  }
+  if (remote.active_shopping_list) {
+    // If remote has newer active_shopping_list, use it
+    setStorage('active_shopping_list', remote.active_shopping_list);
   }
   if (remote.pantry) setStorage('pantry', remote.pantry);
 }
