@@ -1890,7 +1890,10 @@ function refreshPantryList() {
           ${priceStr ? `<span class="pi-price">${priceStr}</span>` : ''}
         </div>
         <div class="pi-actions">
-          ${curUser && curUser.role !== 'viewer' ? `<button class="pi-action-btn" onclick="deletePantryItem(${idx})" title="Delete">\ud83d\uddd1\ufe0f</button>` : ''}
+          ${curUser && curUser.role !== 'viewer' ? `
+            <button class="pi-action-btn" onclick="promptExpiry(${idx})" title="Set Expiry Date">📅</button>
+            <button class="pi-action-btn" onclick="deletePantryItem(${idx})" title="Delete">🗑️</button>
+          ` : ''}
         </div>
       </div>
       ${updatedStr ? `<div class="pi-updated">Updated: ${esc(updatedStr)}</div>` : ''}
@@ -1924,6 +1927,29 @@ function updatePantryQty(idx, delta) {
   items[idx].lastUpdated = new Date().toISOString().split('T')[0];
   savePantryItems(items);
   refreshPantryPage();
+}
+
+function promptExpiry(idx) {
+  if (curUser && curUser.role === 'viewer') return;
+  const items = getPantryItems();
+  if (!items[idx]) return;
+  const current = items[idx].expiryDate || '';
+  const newDate = prompt(`Set expiry date for ${items[idx].name} (YYYY-MM-DD):`, current);
+  if (newDate !== null) {
+    if (newDate.trim() === '') {
+      items[idx].expiryDate = '';
+      savePantryItems(items);
+      refreshPantryPage();
+      toast('🗓️ Expiry date cleared');
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())) {
+      items[idx].expiryDate = newDate.trim();
+      savePantryItems(items);
+      refreshPantryPage();
+      toast('🗓️ Expiry date updated');
+    } else {
+      toast('⚠️ Invalid format. Use YYYY-MM-DD');
+    }
+  }
 }
 
 function addPantryItem() {
