@@ -594,7 +594,26 @@ function deleteDish(idx) {
 // --- Weekly Planner ---
 function initPlanner() {
   migratePantryData();
+  clearOldAutoInjectedPlannerItems();
   refreshPlanner();
+}
+
+function clearOldAutoInjectedPlannerItems() {
+  const shop = getStorage('active_shopping_list', null);
+  if (shop && shop.daily) {
+    let modified = false;
+    shop.daily = shop.daily.filter(item => {
+      if (item.category === 'Planner' && item.purchasedQty === 0 && item.id.startsWith('planner_')) {
+        modified = true;
+        return false; // Remove auto-injected planner items
+      }
+      return true;
+    });
+    if (modified) {
+      setStorage('active_shopping_list', shop);
+      triggerAutoSync();
+    }
+  }
 }
 
 function migratePantryData() {
@@ -1011,14 +1030,10 @@ function switchShopTab(tab) {
   currentShopTab = tab;
   document.querySelectorAll('.shop-tab').forEach(el => {
     el.classList.remove('active');
-    el.style.opacity = '0.6';
-    el.style.borderRight = '1px solid var(--border)';
   });
   const activeTab = document.getElementById(tab === 'daily' ? 'tabDaily' : 'tabPantry');
   if (activeTab) {
     activeTab.classList.add('active');
-    activeTab.style.opacity = '1';
-    activeTab.style.borderRight = 'none';
   }
   const title = document.getElementById('shopActiveTitle');
   if (title) title.textContent = tab === 'daily' ? '🛍️ Daily Groceries List' : '📦 Pantry Restock List';

@@ -1458,6 +1458,37 @@ input, select, textarea, button {
   grid-column: 1 / -1;
 }
 
+/* Shopping Tabs */
+.shop-tabs-container {
+  display: flex;
+  background-color: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+}
+
+.shop-tab {
+  flex: 1;
+  text-align: center;
+  padding: 14px 10px;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.shop-tab:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.shop-tab.active {
+  color: var(--accent-green);
+  font-weight: 700;
+  border-bottom: 3px solid var(--accent-green);
+  background-color: rgba(72, 166, 72, 0.08);
+}
+
 /* Media Breakpoints */
 @media(max-width: 450px) {
   .row {
