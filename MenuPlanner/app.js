@@ -1407,11 +1407,13 @@ function updateSyncStatusUI(status, isError) {
     el.className = 'sync-status';
     const syncBtn = document.getElementById('headerSyncBtn');
     if (syncBtn) syncBtn.style.display = 'none';
+    document.querySelectorAll('.sync-req-btn').forEach(b => b.style.display = 'none');
     return;
   }
 
   const syncBtn = document.getElementById('headerSyncBtn');
   if (syncBtn) syncBtn.style.display = 'flex';
+  document.querySelectorAll('.sync-req-btn').forEach(b => b.style.display = 'inline-flex');
 
   if (status) {
     el.textContent = status;
@@ -1425,8 +1427,8 @@ function updateSyncStatusUI(status, isError) {
 
 function triggerAutoSync() {
   const sync = getStorage('sync_settings', {});
-  if (sync.pat && sync.gistId) {
-    // Debounce: don't auto-push more than once every 10 seconds
+  if (sync.pat && sync.username && sync.repo) {
+    // Debounce: don't auto-push more than once every 3 seconds
     if (triggerAutoSync._timer) clearTimeout(triggerAutoSync._timer);
     triggerAutoSync._timer = setTimeout(() => pushToCloud(true), 3000);
   }

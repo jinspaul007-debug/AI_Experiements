@@ -80,6 +80,7 @@
           <button class="btn btn-o btn-s" onclick="copyPreviousWeek()">📋 Copy Prev Week</button>
           <button class="btn btn-o btn-s" onclick="autoGeneratePlan()">🎲 Auto-Fill (Random)</button>
           <button class="btn btn-no-outline btn-s" onclick="clearCurrentWeek()">🗑️ Clear Week</button>
+          <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
         </div>
       </div>
 
@@ -127,7 +128,10 @@
       <div class="cd">
         <div class="ct" style="justify-content: space-between;">
           <span>📋 Template Dishes (<span id="dbCount">0</span>)</span>
-          <button class="btn btn-o btn-s" id="dbResetDefaultBtn" onclick="resetDbToDefault()">🔄 Reset Defaults</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
+            <button class="btn btn-o btn-s" id="dbResetDefaultBtn" onclick="resetDbToDefault()">🔄 Reset Defaults</button>
+          </div>
         </div>
         <ul class="dish-list" id="dbList"></ul>
       </div>
@@ -157,7 +161,10 @@
       <div class="cd">
         <div class="ct" style="justify-content: space-between;">
           <span>📦 Shopping Checklist</span>
-          <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Clear Checked</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
+            <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Clear Checked</button>
+          </div>
         </div>
         
         <div class="shopping-sections" id="shoppingChecklist">
@@ -355,7 +362,10 @@
       <div class="cd">
         <div class="ct" style="justify-content:space-between;">
           <span>📋 Inventory (<span id="pantryVisibleCount">0</span>)</span>
-          <button class="btn btn-o btn-s" id="pantryResetBtn" onclick="resetPantryDefaults()">🔄 Reset Defaults</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
+            <button class="btn btn-o btn-s" id="pantryResetBtn" onclick="resetPantryDefaults()">🔄 Reset Defaults</button>
+          </div>
         </div>
         <div class="pantry-grid" id="pantryGrid"></div>
       </div>
