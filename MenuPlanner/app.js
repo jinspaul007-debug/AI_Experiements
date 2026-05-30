@@ -1438,17 +1438,21 @@ function saveSyncSettings() {
     return;
   }
 
-  const patEl = document.getElementById('syncPAT');
-  const gistIdEl = document.getElementById('syncGistId');
+  const patEl = document.getElementById('syncPat');
+  const userEl = document.getElementById('syncUsername');
+  const repoEl = document.getElementById('syncRepo');
+  
   const pat = patEl ? patEl.value.trim() : '';
-  const gistId = gistIdEl ? gistIdEl.value.trim() : '';
+  const username = userEl ? userEl.value.trim() : '';
+  const repo = repoEl ? repoEl.value.trim() : '';
 
   const sync = getStorage('sync_settings', {});
   sync.pat = pat;
-  sync.gistId = gistId;
+  sync.username = username;
+  sync.repo = repo;
   setStorage('sync_settings', sync);
 
-  if (!pat) {
+  if (!pat || !username || !repo) {
     updateSyncStatusUI();
     toast('☁️ Cloud sync disabled. Local storage active.');
     return;
@@ -1457,55 +1461,46 @@ function saveSyncSettings() {
   syncData();
 }
 
+const GITHUB_FILE_PATH = 'MenuPlanner/data.enc';
+
+async function githubRequest(method, sync, body = null) {
+  const cacheBust = method === 'GET' ? `?t=${Date.now()}` : '';
+  const url = `https://api.github.com/repos/${sync.username}/${sync.repo}/contents/${GITHUB_FILE_PATH}${cacheBust}`;
+  
+  const options = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${sync.pat}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    },
+    cache: 'no-store'
+  };
+  
+  if (body) options.body = JSON.stringify(body);
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    if (res.status === 404 && method === 'GET') return null;
+    throw new Error(`GitHub API Error: ${res.status}`);
+  }
+  return await res.json();
+}
+
 async function syncData() {
   const sync = getStorage('sync_settings', {});
-  if (!sync.pat) return;
-
-  updateSyncStatusUI('Syncing...', false);
-
+  if (!sync.pat || !sync.username || !sync.repo) return;
+  
+  updateSyncStatusUI('Verifying connection...', false);
   try {
-    if (!sync.gistId) {
-      updateSyncStatusUI('Creating new Gist on GitHub...', false);
-      const res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers: {
-          'Authorization': `token ${sync.pat}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          description: 'MenuPlanner Application Private Data Sync',
-          public: false,
-          files: {
-            'menuplanner_data.json': {
-              content: encryptData(getAllLocalData())
-            }
-          }
-        })
-      });
-
-      if (!res.ok) {
-        if (res.status === 403 || res.status === 404 || res.status === 401) {
-           throw new Error(`GitHub responded with status ${res.status}. Note: Ensure you are using a Classic PAT with 'gist' scope, not a Fine-Grained token.`);
-        }
-        throw new Error(`GitHub responded with status ${res.status}`);
-      }
-
-      const gist = await res.json();
-      sync.gistId = gist.id;
-      sync.lastSyncTime = Date.now();
-      setStorage('sync_settings', sync);
-
-      const gistIdEl = document.getElementById('syncGistId');
-      if (gistIdEl) gistIdEl.value = gist.id;
-
+    const data = await githubRequest('GET', sync);
+    if (!data) {
+      toast('✅ Sync linked! Push to create the initial backup.');
       updateSyncStatusUI();
-      toast('✅ Sync linked! Created new private GitHub Gist.');
     } else {
       await pullFromCloud(false);
     }
   } catch (err) {
-    console.error(err);
     updateSyncStatusUI('Sync failed: ' + err.message, true);
     toast('❌ Sync failed: ' + err.message);
   }
@@ -1538,41 +1533,34 @@ function mergeRemoteData(remote) {
 
 async function pullFromCloud(silent = false) {
   const sync = getStorage('sync_settings', {});
-  if (!sync.pat || !sync.gistId) {
-    if (!silent) toast('⚠️ Cloud sync parameters not set');
-    return;
-  }
-
+  if (!sync.pat || !sync.username || !sync.repo) return;
   if (!silent) updateSyncStatusUI('Pulling latest from GitHub...', false);
 
   try {
-    const res = await fetch(`https://api.github.com/gists/${sync.gistId}`, {
-      headers: {
-        'Authorization': `token ${sync.pat}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-
-    if (!res.ok) {
-      if (res.status === 403 || res.status === 404 || res.status === 401) {
-         throw new Error(`Status ${res.status}. Note: Ensure you are using a Classic PAT with 'gist' scope.`);
-      }
-      throw new Error(`Gist not found (Status ${res.status})`);
+    const data = await githubRequest('GET', sync);
+    if (!data) {
+      if (!silent) toast('No data found on GitHub. Push to create it.');
+      updateSyncStatusUI();
+      return;
     }
-
-    const gist = await res.json();
-    const file = gist.files['menuplanner_data.json'];
-    if (!file) throw new Error('menuplanner_data.json missing from Gist');
-
-    const remoteData = typeof file.content === 'string' && file.content.startsWith('{') 
-      ? JSON.parse(file.content) // Legacy unencrypted gist fallback
-      : decryptData(file.content);
-      
-    mergeRemoteData(remoteData);
-
+    sync.sha = data.sha;
+    
+    const rawContent = data.content.replace(/\n/g, '');
+    let decryptedText = '';
+    
+    try {
+      const decodedStr = decodeURIComponent(escape(atob(rawContent)));
+      const parsedObj = JSON.parse(decodedStr);
+      if (typeof parsedObj === 'object') mergeRemoteData(parsedObj);
+    } catch(e) {
+      const decodedStr = decodeURIComponent(escape(atob(rawContent)));
+      const remoteData = decryptData(decodedStr);
+      mergeRemoteData(remoteData);
+    }
+    
     sync.lastSyncTime = Date.now();
     setStorage('sync_settings', sync);
-
+    
     if (!silent) {
       updateSyncStatusUI();
       toast('📥 Pulled latest plans from cloud!');
@@ -1588,45 +1576,51 @@ async function pullFromCloud(silent = false) {
   }
 }
 
-async function pushToCloud(silent = false) {
+async function pushToCloud(silent = false, retry = false) {
   const sync = getStorage('sync_settings', {});
-  if (!sync.pat || !sync.gistId) return;
-
+  if (!sync.pat || !sync.username || !sync.repo) return;
   if (!silent) updateSyncStatusUI('Pushing to GitHub...', false);
 
   try {
-    const res = await fetch(`https://api.github.com/gists/${sync.gistId}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `token ${sync.pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        files: {
-          'menuplanner_data.json': {
-            content: encryptData(getAllLocalData())
-          }
-        }
-      })
-    });
-
-    if (!res.ok) {
-      if (res.status === 403 || res.status === 404 || res.status === 401) {
-         throw new Error(`Status ${res.status}. Note: Ensure you are using a Classic PAT with 'gist' scope.`);
+    const cipherText = encryptData(getAllLocalData());
+    const contentBase64 = btoa(unescape(encodeURIComponent(cipherText)));
+    
+    const body = {
+      message: `MenuPlanner auto-sync: ${new Date().toLocaleString()}`,
+      content: contentBase64
+    };
+    
+    if (sync.sha) body.sha = sync.sha;
+    
+    if (!sync.sha && !retry) {
+      const existData = await githubRequest('GET', sync);
+      if (existData) {
+        sync.sha = existData.sha;
+        body.sha = sync.sha;
       }
-      throw new Error(`Status ${res.status}`);
     }
-
+    
+    const response = await githubRequest('PUT', sync, body);
+    if (response && response.content) {
+      sync.sha = response.content.sha;
+    }
+    
     sync.lastSyncTime = Date.now();
     setStorage('sync_settings', sync);
-
     if (!silent) {
       updateSyncStatusUI();
-      toast('📤 Pushed latest plans to cloud!');
+      toast('📤 Successfully pushed to GitHub!');
     }
   } catch (err) {
     console.error(err);
+    if (err.message.includes('409') && !retry) {
+      const fresh = await githubRequest('GET', sync);
+      if (fresh) {
+        sync.sha = fresh.sha;
+        setStorage('sync_settings', sync);
+        return pushToCloud(silent, true);
+      }
+    }
     if (!silent) {
       updateSyncStatusUI('Push failed: ' + err.message, true);
       toast('❌ Push failed: ' + err.message);

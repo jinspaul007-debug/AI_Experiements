@@ -205,14 +205,19 @@
         <p class="section-desc">Keep your food plans and dishes synchronized across iPhone, Android, and other family devices.</p>
         
         <div class="input-group">
-          <label class="lbl" for="syncPAT">GitHub Personal Access Token (PAT)</label>
-          <input type="password" class="inp" id="syncPAT" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-          <span class="input-info">Need a token with 'gist' scope to read/write sync data.</span>
+          <label class="lbl" for="syncPat">GitHub Personal Access Token (PAT)</label>
+          <input type="password" class="inp" id="syncPat" placeholder="ghp_xxxxxxxxxxxx">
+          <span class="input-info">Need a Classic token with 'repo' scope for repository sync.</span>
         </div>
         
         <div class="input-group">
-          <label class="lbl" for="syncGistId">GitHub Gist ID (Optional)</label>
-          <input type="text" class="inp" id="syncGistId" placeholder="Leave blank to create a new private Gist">
+          <label class="lbl" for="syncUsername">GitHub Username</label>
+          <input type="text" class="inp" id="syncUsername" placeholder="e.g. jinspaul007-debug">
+        </div>
+        
+        <div class="input-group">
+          <label class="lbl" for="syncRepo">GitHub Repository</label>
+          <input type="text" class="inp" id="syncRepo" placeholder="e.g. AI_Experiements">
         </div>
 
         <div class="sync-status" id="syncStatus">Not Linked</div>
