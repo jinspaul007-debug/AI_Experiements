@@ -2726,6 +2726,82 @@ function resetPantryDefaults() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// EXPORT UTILITIES (CSV)
+// ═══════════════════════════════════════════════════════════
+
+function downloadCSV(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function escapeCSV(str) {
+  if (str === null || str === undefined) return '';
+  const s = String(str);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportPlannerCSV() {
+  const titleEl = document.getElementById('plannerWeekTitle');
+  const weekId = titleEl ? titleEl.textContent.replace(', ', '-') : 'MenuPlan';
+  const plan = getStorage('weekly_plans', {})[curWeekKey] || {};
+  let csv = 'Day,Slot,Dish Name\n';
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const slots = ['Breakfast', 'Lunch', 'Dinner'];
+  
+  days.forEach(day => {
+    slots.forEach(slot => {
+      const dish = plan[`${day.toLowerCase()}-${slot.toLowerCase()}`];
+      csv += `${day},${slot},${escapeCSV(dish ? dish.name : '')}\n`;
+    });
+  });
+  
+  downloadCSV(csv, `${weekId.replace(/\s+/g, '_')}.csv`);
+  toast('📥 Excel/CSV downloaded');
+}
+
+function exportShoppingCSV() {
+  const shop = getStorage('active_shopping_list', { daily: [], pantry: [] });
+  let csv = 'List Type,Item Name,Category,Purchased,Required,Unit\n';
+  
+  shop.daily.forEach(i => {
+    csv += `Daily Groceries,${escapeCSV(i.name)},${escapeCSV(i.category)},${i.purchasedQty},${i.requiredQty},${i.unit}\n`;
+  });
+  shop.pantry.forEach(i => {
+    csv += `Pantry Restock,${escapeCSV(i.name)},${escapeCSV(i.category)},${i.purchasedQty},${i.requiredQty},${i.unit}\n`;
+  });
+  
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(csv, `ShoppingList_${dateStr}.csv`);
+  toast('📥 Excel/CSV downloaded');
+}
+
+function exportPantryCSV() {
+  const pantry = getStorage('pantry', []);
+  let csv = 'Item Name,Category,Current Qty,Min Stock,Unit,Price per Unit,Expiry Date,Status\n';
+  
+  pantry.forEach(i => {
+    let status = 'In Stock';
+    if (i.qty <= 0) status = 'Out of Stock';
+    else if (i.qty <= i.minStock) status = 'Low Stock';
+    
+    csv += `${escapeCSV(i.name)},${escapeCSV(i.cat || i.category)},${i.qty},${i.minStock},${i.unit},${i.price || 0},${i.expiryDate || ''},${status}\n`;
+  });
+  
+  const dateStr = new Date().toISOString().split('T')[0];
+  downloadCSV(csv, `PantryInventory_${dateStr}.csv`);
+  toast('📥 Excel/CSV downloaded');
+}
+
+// ═══════════════════════════════════════════════════════════
 // DOMContentLoaded — Safe initialization after DOM is ready
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {

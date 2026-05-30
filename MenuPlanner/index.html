@@ -80,6 +80,8 @@
           <button class="btn btn-o btn-s" onclick="copyPreviousWeek()">📋 Copy Prev Week</button>
           <button class="btn btn-o btn-s" onclick="autoGeneratePlan()">🎲 Auto-Fill (Random)</button>
           <button class="btn btn-no-outline btn-s" onclick="clearCurrentWeek()">🗑️ Clear Week</button>
+          <button class="btn btn-o btn-s" onclick="window.print()">🖨️ Print / PDF</button>
+          <button class="btn btn-o btn-s" onclick="exportPlannerCSV()">📊 Excel</button>
           <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
         </div>
       </div>
@@ -196,8 +198,10 @@
         <div style="padding: 15px;">
           <div class="ct" style="justify-content: space-between;">
             <span id="shopActiveTitle">🛍️ Daily Groceries List</span>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
               <button class="btn btn-p btn-s sync-req-btn" onclick="pushToCloud(false)" style="display:none">☁️ Save to Cloud</button>
+              <button class="btn btn-o btn-s" onclick="window.print()">🖨️ Print / PDF</button>
+              <button class="btn btn-o btn-s" onclick="exportShoppingCSV()">📊 Excel</button>
               <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Rollover & Clear</button>
             </div>
           </div>
@@ -340,7 +344,13 @@
       </div>
 
       <div class="cd">
-        <div class="ct">🏪 Pantry Inventory</div>
+        <div class="ct" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <span>🏪 Pantry Inventory</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-o btn-s" onclick="window.print()">🖨️ Print / PDF</button>
+            <button class="btn btn-o btn-s" onclick="exportPantryCSV()">📊 Excel</button>
+          </div>
+        </div>
         <p class="section-desc">Track your kitchen stock. Items turning <span style="color:var(--accent-gold)">amber</span> are running low. Items in <span style="color:var(--accent-red)">red</span> need restocking.</p>
         
         <label class="lbl">Filter Category</label>

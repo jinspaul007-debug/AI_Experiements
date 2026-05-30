@@ -1515,3 +1515,44 @@ input, select, textarea, button {
   }
 }
 
+/* Print / PDF Export Styles */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .hdr, .bnav, .btn, .cd-actions, .quick-add-container, .modal-overlay, #loginScreen {
+    display: none !important;
+  }
+  .main-content {
+    padding-bottom: 0 !important;
+    padding-top: 0 !important;
+  }
+  .pg {
+    display: none !important;
+  }
+  .pg.active {
+    display: block !important;
+  }
+  .cd {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+    background-color: white !important;
+    color: black !important;
+  }
+  .meal-slot, .checklist-item, .pantry-item {
+    background-color: white !important;
+    border: 1px solid #ddd !important;
+    color: black !important;
+  }
+  .ct {
+    color: black !important;
+    border-bottom: 2px solid #000 !important;
+  }
+  .shop-tab {
+    border: 1px solid #000 !important;
+  }
+}
