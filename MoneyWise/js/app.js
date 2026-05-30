@@ -878,7 +878,7 @@ const App = {
     },
 
     updateWealthVisibility() {
-        const show = this.data?.settings?.showWealthPage !== false;
+        const show = this.data?.settings?.showWealthPage === true;
         document.querySelectorAll('[data-view="wealth"]').forEach(el => {
             el.style.display = show ? '' : 'none';
         });
@@ -1038,7 +1038,7 @@ const App = {
 
         const wealthCheck = document.getElementById('settings-show-wealth');
         if (wealthCheck) {
-            wealthCheck.checked = this.data.settings?.showWealthPage !== false;
+            wealthCheck.checked = this.data.settings?.showWealthPage === true;
         }
     },
 
