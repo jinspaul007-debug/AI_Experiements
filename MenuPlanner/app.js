@@ -215,7 +215,7 @@ const SLOT_MAPPINGS = {
     'addon': { label: 'Add-on', cat: 'addons', shop: [] }
   },
   'dinner': {
-    'main': { label: 'Main Course', cat: 'breakfast_main', shop: [] },
+    'main': { label: 'Main Course', cat: 'rice_main', shop: [] },
     'curd': { label: 'Curd', cat: 'addons', shop: [] },
     'curry': { label: 'Curry', cat: 'curries', shop: [] },
     'protein': { label: 'Protein', cat: 'dry_thoran', shop: [] },
@@ -256,11 +256,32 @@ function esc(str) {
   return div.innerHTML;
 }
 
-// --- Storage Helper Utilities ---
+// --- Storage Helper Utilities & Encryption ---
+const ENCRYPTION_KEY = 'MenuPlanner_Secure_Key_2026';
+
+function encryptData(data) {
+  if (!window.CryptoJS) return JSON.stringify(data);
+  return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString();
+}
+
+function decryptData(cipherText) {
+  if (!window.CryptoJS) return JSON.parse(cipherText);
+  try {
+    const bytes = CryptoJS.AES.decrypt(cipherText, ENCRYPTION_KEY);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    if (!decrypted) throw new Error('Decryption empty');
+    return JSON.parse(decrypted);
+  } catch (e) {
+    // Fallback for migration of unencrypted legacy data
+    return JSON.parse(cipherText);
+  }
+}
+
 function getStorage(key, defaultVal) {
   try {
     const v = localStorage.getItem('mp_' + key);
-    return v ? JSON.parse(v) : defaultVal;
+    if (!v) return defaultVal;
+    return decryptData(v);
   } catch (e) {
     return defaultVal;
   }
@@ -268,7 +289,8 @@ function getStorage(key, defaultVal) {
 
 function setStorage(key, val) {
   try {
-    localStorage.setItem('mp_' + key, JSON.stringify(val));
+    const cipherText = encryptData(val);
+    localStorage.setItem('mp_' + key, cipherText);
   } catch (e) {
     toast('⚠️ Storage error. Data may not be saved.');
     console.error('localStorage write failed:', e);
@@ -1034,6 +1056,16 @@ function refreshShoppingPage() {
     return;
   }
 
+  const pantry = getStorage('pantry', DEFAULT_PANTRY_ITEMS);
+  const getStockBadge = (name) => {
+    const pItem = pantry.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (pItem) {
+      if (pItem.qty <= 0) return '<span class="badge badge-red" style="margin-left:8px;font-size:10px;">Out of Stock</span>';
+      if (pItem.qty <= pItem.minStock) return '<span class="badge badge-amber" style="margin-left:8px;font-size:10px;">Low Stock</span>';
+    }
+    return '';
+  };
+
   const renderItem = (it) => {
     const div = document.createElement('div');
     div.className = `shop-item-row${it.checked ? ' checked' : ''}`;
@@ -1041,7 +1073,7 @@ function refreshShoppingPage() {
 
     div.innerHTML = `
       <div class="shop-chk"></div>
-      <div class="shop-item-text">${esc(it.name)}</div>
+      <div class="shop-item-text">${esc(it.name)} ${!it.checked ? getStockBadge(it.name) : ''}</div>
       ${it.qty > 1 && !it.checked ? `<span class="shop-qty-badge">${it.qty}x</span>` : ''}
     `;
 
@@ -1090,7 +1122,6 @@ function refreshShoppingPage() {
   const suggestionsContainer = document.getElementById('shopSuggestionsContainer');
   const suggestionsGrid = document.getElementById('shopSuggestionsGrid');
   if (suggestionsContainer && suggestionsGrid) {
-    const pantry = getStorage('pantry', DEFAULT_PANTRY_ITEMS);
     const existingNames = activeItems.map(it => it.name.toLowerCase());
     const suggestions = pantry.filter(p => {
       if (p.qty > p.minStock) return false;
@@ -1447,7 +1478,7 @@ async function syncData() {
           public: false,
           files: {
             'menuplanner_data.json': {
-              content: JSON.stringify(getAllLocalData(), null, 2)
+              content: encryptData(getAllLocalData())
             }
           }
         })
@@ -1533,7 +1564,10 @@ async function pullFromCloud(silent = false) {
     const file = gist.files['menuplanner_data.json'];
     if (!file) throw new Error('menuplanner_data.json missing from Gist');
 
-    const remoteData = JSON.parse(file.content);
+    const remoteData = typeof file.content === 'string' && file.content.startsWith('{') 
+      ? JSON.parse(file.content) // Legacy unencrypted gist fallback
+      : decryptData(file.content);
+      
     mergeRemoteData(remoteData);
 
     sync.lastSyncTime = Date.now();
@@ -1571,7 +1605,7 @@ async function pushToCloud(silent = false) {
       body: JSON.stringify({
         files: {
           'menuplanner_data.json': {
-            content: JSON.stringify(getAllLocalData(), null, 2)
+            content: encryptData(getAllLocalData())
           }
         }
       })
@@ -1619,111 +1653,686 @@ const PANTRY_CATEGORIES = {
 };
 
 const DEFAULT_PANTRY_ITEMS = [
-  // Spices & Seeds
-  { name: 'Cardamom', cat: 'spices', qty: 0, unit: 'g', minStock: 20, price: 0 },
-  { name: 'Clove', cat: 'spices', qty: 0, unit: 'g', minStock: 20, price: 1350 },
-  { name: 'Cumin Seeds', cat: 'spices', qty: 0, unit: 'g', minStock: 50, price: 630 },
-  { name: 'Fennel Seeds', cat: 'spices', qty: 0, unit: 'g', minStock: 50, price: 240 },
-  { name: 'Fenugreek', cat: 'spices', qty: 0, unit: 'g', minStock: 50, price: 180 },
-  { name: 'Mustard Seeds', cat: 'spices', qty: 0, unit: 'kg', minStock: 0.2, price: 115 },
-  { name: 'Pepper', cat: 'spices', qty: 0, unit: 'g', minStock: 50, price: 0 },
-  { name: 'Dry Red Chilli', cat: 'spices', qty: 0, unit: 'g', minStock: 50, price: 0 },
-  { name: 'Chia Seeds', cat: 'spices', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Flax Seeds', cat: 'spices', qty: 0, unit: 'kg', minStock: 0.2, price: 0 },
-  { name: 'Sunflower Seeds', cat: 'spices', qty: 0, unit: 'g', minStock: 100, price: 0 },
-
-  // Grains & Rice
-  { name: 'Pacha Rice (Matta)', cat: 'grains', qty: 0, unit: 'kg', minStock: 2, price: 33 },
-  { name: 'Basmati Rice', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 0 },
-  { name: 'Rava (Semolina)', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 99 },
-  { name: 'Atta Multi Grains', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 0 },
-  { name: 'Aval (Flattened Rice)', cat: 'grains', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Puttu Podi', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 92 },
-  { name: 'Ragi Puttu Podi', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 90 },
-  { name: 'Corn Puttu Podi', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 90 },
-  { name: 'Idiyappam Powder', cat: 'grains', qty: 0, unit: 'kg', minStock: 1, price: 0 },
-  { name: 'Oats', cat: 'grains', qty: 0, unit: 'kg', minStock: 0.3, price: 0 },
-  { name: 'Ragi', cat: 'grains', qty: 0, unit: 'kg', minStock: 0.5, price: 110 },
-  { name: 'Corn Flour', cat: 'grains', qty: 0, unit: 'g', minStock: 200, price: 0 },
-  { name: 'Corn Flakes', cat: 'grains', qty: 0, unit: 'kg', minStock: 0.3, price: 0 },
-  { name: 'Salt', cat: 'grains', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-
-  // Dals & Lentils
-  { name: 'Cheru Payar (Green Gram)', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 127 },
-  { name: 'Van Payar (Red Cowpeas)', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 94.5 },
-  { name: 'Kadala (Chickpeas)', cat: 'dal', qty: 0, unit: 'kg', minStock: 1, price: 75 },
-  { name: 'Channa', cat: 'dal', qty: 0, unit: 'kg', minStock: 1, price: 134 },
-  { name: 'Pottu Kadala', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.2, price: 240 },
-  { name: 'Green Peas', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Dal Toor', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Dal Red Toor', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Dal Moong', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Dal Urad (Uzhunu)', cat: 'dal', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Soya Chunks', cat: 'dal', qty: 0, unit: 'g', minStock: 200, price: 0 },
-
-  // Masala & Powders
-  { name: 'Chilli Powder', cat: 'masala', qty: 0, unit: 'kg', minStock: 0.2, price: 0 },
-  { name: 'Turmeric Powder', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Coriander Powder', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Kashmiri Chilli Powder', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Garam Masala', cat: 'masala', qty: 0, unit: 'kg', minStock: 0.1, price: 1080 },
-  { name: 'Sambar Powder', cat: 'masala', qty: 0, unit: 'kg', minStock: 0.1, price: 540 },
-  { name: 'Chat Masala', cat: 'masala', qty: 0, unit: 'g', minStock: 50, price: 0 },
-  { name: 'Chicken Masala', cat: 'masala', qty: 0, unit: 'g', minStock: 50, price: 580 },
-  { name: 'Chicken Fry Masala', cat: 'masala', qty: 0, unit: 'g', minStock: 50, price: 600 },
-  { name: 'Meat Masala', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 580 },
-  { name: 'Biriyani Masala', cat: 'masala', qty: 0, unit: 'g', minStock: 50, price: 0 },
-  { name: 'Biriyani Spices', cat: 'masala', qty: 0, unit: 'pkt', minStock: 1, price: 0 },
-  { name: 'Kasuri Methi', cat: 'masala', qty: 0, unit: 'g', minStock: 25, price: 0 },
-  { name: 'Chammanthi Podi', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Dahamukthi', cat: 'masala', qty: 0, unit: 'g', minStock: 50, price: 0 },
-  { name: 'Turmeric Powder (Cleaning)', cat: 'masala', qty: 0, unit: 'g', minStock: 100, price: 0 },
-
-  // Snacks & Cereals
-  { name: 'Biscuits', cat: 'snacks', qty: 0, unit: 'pkt', minStock: 2, price: 0 },
-  { name: 'Choco Fills Biscuit', cat: 'snacks', qty: 0, unit: 'pkt', minStock: 1, price: 0 },
-  { name: 'Rusk', cat: 'snacks', qty: 0, unit: 'pkt', minStock: 1, price: 0 },
-  { name: 'Tea Powder (Strong)', cat: 'snacks', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-
-  // Oils & Liquids
-  { name: 'Tamarind', cat: 'oils', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Vinegar', cat: 'oils', qty: 0, unit: 'ml', minStock: 200, price: 0 },
-
-  // Dry Fruits & Nuts
-  { name: 'Almonds', cat: 'dryfruits', qty: 0, unit: 'kg', minStock: 0.2, price: 0 },
-  { name: 'Cashew', cat: 'dryfruits', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Pista', cat: 'dryfruits', qty: 0, unit: 'g', minStock: 100, price: 0 },
-  { name: 'Raisins (Kismiss)', cat: 'dryfruits', qty: 0, unit: 'kg', minStock: 0.2, price: 0 },
-  { name: 'Dates', cat: 'dryfruits', qty: 0, unit: 'g', minStock: 200, price: 0 },
-
-  // Baking & Sweeteners
-  { name: 'Cane Sugar', cat: 'baking', qty: 0, unit: 'kg', minStock: 1, price: 0 },
-  { name: 'Jaggery', cat: 'baking', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Jaggery Powder', cat: 'baking', qty: 0, unit: 'g', minStock: 250, price: 0 },
-  { name: 'Vellam Loose', cat: 'baking', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Baking Soda', cat: 'baking', qty: 0, unit: 'g', minStock: 50, price: 0 },
-
-  // Household
-  { name: 'Tissue Paper Box', cat: 'household', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-  { name: 'Tissue Paper Roll', cat: 'household', qty: 0, unit: 'pcs', minStock: 4, price: 0 },
-  { name: 'Sponge Scrubber', cat: 'household', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-  { name: 'Steel Scrubber', cat: 'household', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-
-  // Baby Care
-  { name: 'Baby Powder', cat: 'baby', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-  { name: 'Baby Lotion', cat: 'baby', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-  { name: 'Body Lotion', cat: 'baby', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-
-  // Cleaning
-  { name: 'Handwash', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-  { name: 'Shampoo', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-  { name: 'Soap', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-  { name: 'Soap Powder', cat: 'cleaning', qty: 0, unit: 'kg', minStock: 0.5, price: 0 },
-  { name: 'Washing Soap', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-  { name: 'Laundry Detergent', cat: 'cleaning', qty: 0, unit: 'L', minStock: 1, price: 0 },
-  { name: 'Drain Cleaner', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 1, price: 0 },
-  { name: 'Tooth Brush', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 2, price: 0 },
-  { name: 'Tooth Paste', cat: 'cleaning', qty: 0, unit: 'pcs', minStock: 1, price: 0 }
+  {
+    "name": "Almonds",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Baby powder",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Atta multi grains",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Bady loation",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Aval",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 73.0
+  },
+  {
+    "name": "Body Lotion",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Baking Soda",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Drain cleaner",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Basmathi Rice",
+    "cat": "pantry",
+    "qty": 6.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 165.0
+  },
+  {
+    "name": "Handwash",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Biriyani Masala",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Shampoo",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Biriyani spices",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Soap",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Biscut",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Soap powder",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Cane Sugar",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 57.0
+  },
+  {
+    "name": "Sponge scrubber",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "cardamom",
+    "cat": "pantry",
+    "qty": 0.05,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Steel scrubber",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Cashew",
+    "cat": "pantry",
+    "qty": 0.5,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Tissue papper box",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Chamanthi podi",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Tissue papper roll",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Channa",
+    "cat": "pantry",
+    "qty": 1.5,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 134.0
+  },
+  {
+    "name": "Tooth Brush",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Chat Masala",
+    "cat": "pantry",
+    "qty": 0.1,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Tooth Paste",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Cheru Payar loose",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 127.0
+  },
+  {
+    "name": "Washin machine Laundary detergent",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Chiken Fry Masala",
+    "cat": "pantry",
+    "qty": 0.05,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 600.0
+  },
+  {
+    "name": "Washing soap",
+    "cat": "household",
+    "qty": 0.0,
+    "unit": "pcs",
+    "minStock": 1,
+    "price": 0.0
+  },
+  {
+    "name": "Chiken Masala",
+    "cat": "pantry",
+    "qty": 0.1,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 580.0
+  },
+  {
+    "name": "Chilli Powder",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Chiya Seeds",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Choco Fills Biscuit",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Clove",
+    "cat": "pantry",
+    "qty": 0.02,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 1350.0
+  },
+  {
+    "name": "Coriander Powder",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Corn Flakes",
+    "cat": "pantry",
+    "qty": 0.5,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Corn Flour",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Corn puttupodi",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 90.0
+  },
+  {
+    "name": "Cumin seeds",
+    "cat": "pantry",
+    "qty": 0.05,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 630.0
+  },
+  {
+    "name": "Dahamukthi",
+    "cat": "pantry",
+    "qty": 0.2,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dal Moong",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dal Red Toor",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dal Toor",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dal Urad - Uzhunu",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dates",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Dry Red Chilli",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Fennal Seeds",
+    "cat": "pantry",
+    "qty": 0.1,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 240.0
+  },
+  {
+    "name": "Fenugreek",
+    "cat": "pantry",
+    "qty": 0.1,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 180.0
+  },
+  {
+    "name": "Flax seeds",
+    "cat": "pantry",
+    "qty": 0.5,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Garam Masala",
+    "cat": "pantry",
+    "qty": 0.25,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 1080.0
+  },
+  {
+    "name": "Green peas",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Idiyappam podwer",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Jaggery",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Jaggery Powder",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Kadala",
+    "cat": "pantry",
+    "qty": 3.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 75.0
+  },
+  {
+    "name": "Kashmiri Chilli Powder",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Kasuri Methi",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Kismiss",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Meat Masala",
+    "cat": "pantry",
+    "qty": 0.2,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 580.0
+  },
+  {
+    "name": "Mustard",
+    "cat": "pantry",
+    "qty": 0.45,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 115.0
+  },
+  {
+    "name": "Oats",
+    "cat": "pantry",
+    "qty": 0.5,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Pacha Rice",
+    "cat": "pantry",
+    "qty": 2.25,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 33.0
+  },
+  {
+    "name": "Pepper",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Pista",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "pottu kadala",
+    "cat": "pantry",
+    "qty": 0.25,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 240.0
+  },
+  {
+    "name": "Puttu podi",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 92.0
+  },
+  {
+    "name": "Ragi",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 110.0
+  },
+  {
+    "name": "Ragi puttu podi",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 90.0
+  },
+  {
+    "name": "Rasins",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Rava",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 99.0
+  },
+  {
+    "name": "Rusk",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Salt",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Sambar Powder",
+    "cat": "pantry",
+    "qty": 0.2,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 540.0
+  },
+  {
+    "name": "Soya Chunks",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Sunflower Seeds",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Tamerind",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Tea powder strong",
+    "cat": "pantry",
+    "qty": 2.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Turmaric powder",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Turmeric powder cleaning",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Van payar",
+    "cat": "pantry",
+    "qty": 1.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 94.5
+  },
+  {
+    "name": "Vellam Loose",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  },
+  {
+    "name": "Vinegar",
+    "cat": "pantry",
+    "qty": 0.0,
+    "unit": "kg",
+    "minStock": 0.5,
+    "price": 0.0
+  }
 ];
 
 function getPantryItems() {
