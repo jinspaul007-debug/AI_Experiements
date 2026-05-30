@@ -1,0 +1,12 @@
+# Ignore local documentation (not for GitHub)
+requirment.md
+USERGUIDE.md
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Source data
+ASN Grocery List.xlsx
+*.xlsx

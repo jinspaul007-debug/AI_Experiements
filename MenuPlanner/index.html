@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0c120c">
+  <link rel="manifest" href="manifest.json">
+  <title>MenuPlanner — South Indian & Kerala Food Menu Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+  <!-- LOGIN SCREEN -->
+  <div class="login-overlay" id="loginScreen">
+    <div class="login-box">
+      <div class="logo">🍲</div>
+      <h2>MenuPlanner</h2>
+      <p class="login-subtitle">Kerala & South Indian Weekly Menu Planner</p>
+      
+      <div class="input-group">
+        <label class="lbl" for="loginUser">Username</label>
+        <input type="text" class="inp" id="loginUser" placeholder="admin" value="admin">
+      </div>
+      
+      <div class="input-group">
+        <label class="lbl" for="loginPass">Password</label>
+        <input type="password" class="inp" id="loginPass" placeholder="admin123" value="admin123">
+      </div>
+      
+      <button class="btn btn-p btn-bl" onclick="login()">🔐 Login to Planner</button>
+      <p class="login-info">Default: admin / admin123</p>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="hdr" id="appHeader" style="display:none">
+    <div class="hdr-main">
+      <div>
+        <h1>MenuPlanner</h1>
+        <div class="sub">South Indian & Kerala Kitchen Planner</div>
+      </div>
+      <div class="hdr-actions">
+        <button class="btn-sync-icon" id="headerSyncBtn" onclick="syncData()" title="Sync with GitHub Gist" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.57.57"/></svg>
+        </button>
+        <div class="badge" id="userBadge">
+          <span>👤</span> <span id="userName">Admin</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <main class="main-content" id="appContent" style="display:none">
+    
+    <!-- PAGE: PLANNER -->
+    <section class="pg active" id="pgPlanner">
+      <!-- Week Selector Card -->
+      <div class="cd week-selector-card">
+        <div class="week-selector">
+          <button class="btn btn-o btn-icon" onclick="changeWeek(-1)" title="Previous Week">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="week-display">
+            <span class="week-title" id="plannerWeekTitle">Week 22, 2026</span>
+            <span class="week-dates" id="plannerWeekDates">May 31 - Jun 06</span>
+          </div>
+          <button class="btn btn-o btn-icon" onclick="changeWeek(1)" title="Next Week">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        
+        <div class="planner-actions">
+          <button class="btn btn-o btn-s" onclick="copyPreviousWeek()">📋 Copy Prev Week</button>
+          <button class="btn btn-o btn-s" onclick="autoGeneratePlan()">🎲 Auto-Fill (Random)</button>
+          <button class="btn btn-no-outline btn-s" onclick="clearCurrentWeek()">🗑️ Clear Week</button>
+        </div>
+      </div>
+
+      <!-- Days Grid -->
+      <div class="days-container">
+        <!-- Generates 7 days dynamically -->
+        <div id="plannerDaysList"></div>
+      </div>
+    </section>
+
+    <!-- PAGE: DATABASE -->
+    <section class="pg" id="pgDatabase">
+      <div class="cd">
+        <div class="ct">🍲 Dish Database</div>
+        <p class="section-desc">Manage your template options for weekly scheduling. Selecting dishes from this repository populates your planner slot choices.</p>
+        
+        <!-- Category selector -->
+        <label class="lbl">Filter Category</label>
+        <div class="chc" id="dbCatFilter">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div class="search-box-container">
+          <input type="text" class="inp" id="dbSearch" placeholder="Search dishes..." oninput="refreshDbList()">
+        </div>
+      </div>
+
+      <div class="cd" id="dbAddContainer">
+        <div class="ct">➕ Add New Dish</div>
+        <div class="row">
+          <div class="col" style="flex: 2;">
+            <label class="lbl" for="dbNewName">Dish Name</label>
+            <input type="text" class="inp" id="dbNewName" placeholder="e.g. Kozhukatta / Appam">
+          </div>
+          <div class="col">
+            <label class="lbl" for="dbNewCat">Category</label>
+            <select class="sel" id="dbNewCat">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-p btn-bl" onclick="addNewDish()">💾 Save to Database</button>
+      </div>
+
+      <div class="cd">
+        <div class="ct" style="justify-content: space-between;">
+          <span>📋 Template Dishes (<span id="dbCount">0</span>)</span>
+          <button class="btn btn-o btn-s" id="dbResetDefaultBtn" onclick="resetDbToDefault()">🔄 Reset Defaults</button>
+        </div>
+        <ul class="dish-list" id="dbList"></ul>
+      </div>
+    </section>
+
+    <!-- PAGE: SHOPPING -->
+    <section class="pg" id="pgShopping">
+      <div class="cd">
+        <div class="ct">🛒 Shopping List</div>
+        <p class="section-desc">Items to buy for the selected week. Items are automatically generated based on the scheduled menu dishes, plus any custom additions.</p>
+        
+        <div class="week-display-compact">
+          Current View: <strong id="shoppingWeekTitle">Week 22, 2026</strong>
+        </div>
+      </div>
+
+      <!-- Add custom shopping item -->
+      <div class="cd" id="shopAddContainer">
+        <div class="ct">➕ Add Custom Item</div>
+        <div class="row" style="margin-bottom: 0;">
+          <input type="text" class="inp" id="shopNewItem" placeholder="e.g. Coconut Oil, Milk, Eggs" style="margin-bottom: 0;">
+          <button class="btn btn-p" onclick="addShoppingItem()" style="flex-shrink: 0;">Add</button>
+        </div>
+      </div>
+
+      <!-- Shopping list checkboxes -->
+      <div class="cd">
+        <div class="ct" style="justify-content: space-between;">
+          <span>📦 Shopping Checklist</span>
+          <button class="btn btn-o btn-s" onclick="clearPurchasedItems()">🧹 Clear Checked</button>
+        </div>
+        
+        <div class="shopping-sections" id="shoppingChecklist">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Suggested from Pantry -->
+      <div class="cd" id="shopSuggestionsContainer" style="display:none;">
+        <div class="ct">💡 Suggested from Pantry</div>
+        <p class="section-desc">These items are running low or out of stock in your pantry.</p>
+        <div class="pantry-suggestions-grid" id="shopSuggestionsGrid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE: SETTINGS -->
+    <section class="pg" id="pgSettings">
+      <!-- Family Members Config -->
+      <div class="cd">
+        <div class="ct">👥 Family Members</div>
+        <div id="settingsMemberWriteArea">
+          <div class="row">
+            <div class="col" style="flex: 2;">
+              <label class="lbl" for="newUserName">Name</label>
+              <input type="text" class="inp" id="newUserName" placeholder="Name">
+            </div>
+            <div class="col">
+              <label class="lbl" for="newUserRole">Role</label>
+              <select class="sel" id="newUserRole">
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-p btn-s" onclick="addFamilyMember()">➕ Add Member</button>
+        </div>
+        <ul class="tlist" id="memberList"></ul>
+      </div>
+
+      <!-- GitHub Gist Cloud Sync -->
+      <div class="cd">
+        <div class="ct">☁️ GitHub Sync</div>
+        <p class="section-desc">Keep your food plans and dishes synchronized across iPhone, Android, and other family devices.</p>
+        
+        <div class="input-group">
+          <label class="lbl" for="syncPAT">GitHub Personal Access Token (PAT)</label>
+          <input type="password" class="inp" id="syncPAT" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+          <span class="input-info">Need a token with 'gist' scope to read/write sync data.</span>
+        </div>
+        
+        <div class="input-group">
+          <label class="lbl" for="syncGistId">GitHub Gist ID (Optional)</label>
+          <input type="text" class="inp" id="syncGistId" placeholder="Leave blank to create a new private Gist">
+        </div>
+
+        <div class="sync-status" id="syncStatus">Not Linked</div>
+        
+        <div class="settings-actions">
+          <button class="btn btn-p" onclick="saveSyncSettings()">🔗 Link & Sync</button>
+          <button class="btn btn-o" onclick="pullFromCloud()">📥 Pull from GitHub</button>
+          <button class="btn btn-o" onclick="pushToCloud()">📤 Push to GitHub</button>
+        </div>
+      </div>
+
+      <!-- Password Change -->
+      <div class="cd">
+        <div class="ct">🔑 Security</div>
+        <div class="input-group">
+          <label class="lbl" for="oldPass">Current Password</label>
+          <input type="password" class="inp" id="oldPass" placeholder="Current password">
+        </div>
+        <div class="input-group">
+          <label class="lbl" for="newPass">New Password</label>
+          <input type="password" class="inp" id="newPass" placeholder="New password (min 6 characters)">
+        </div>
+        <button class="btn btn-p btn-s" onclick="changeUserPassword()">🔑 Change Password</button>
+      </div>
+
+      <!-- Data Import / Export -->
+      <div class="cd">
+        <div class="ct">💾 Data Management</div>
+        <div class="settings-actions">
+          <button class="btn btn-o btn-s" onclick="exportDataJSON()">📥 Export JSON Backup</button>
+          <button class="btn btn-o btn-s" onclick="document.getElementById('importFileInput').click()">📤 Import Backup</button>
+          <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importDataJSON(event)">
+        </div>
+        <div style="margin-top: 15px;">
+          <button class="btn btn-no btn-s" id="settingsResetBtn" onclick="confirmResetAll()">🗑️ Reset Database & Settings</button>
+        </div>
+      </div>
+
+      <!-- About metadata -->
+      <div class="cd about-card">
+        <div class="ct">ℹ️ About MenuPlanner</div>
+        <p><strong>MenuPlanner v1.2</strong></p>
+        <p>Developed with support for offline storage and secure cross-device sync. Optimized for Safari, Chrome, Edge, iOS, and Android.</p>
+        <p style="font-size: 13px; color: var(--text-sub); margin-top: 5px;">A secure, offline-first household management tool integrating weekly meal planning, dynamic shopping list generation, and comprehensive pantry stock/expiry tracking.</p>
+        <button class="btn btn-no-outline btn-s" onclick="logout()" style="margin-top: 10px;">🔐 Logout</button>
+      </div>
+    </section>
+
+    <!-- PAGE: PANTRY -->
+    <section class="pg" id="pgPantry">
+      <!-- Status Summary Cards -->
+      <div class="pantry-status-row">
+        <div class="status-card status-total">
+          <div class="status-icon">📦</div>
+          <div class="status-num" id="pantryTotalCount">0</div>
+          <div class="status-lbl">Total Items</div>
+        </div>
+        <div class="status-card status-low">
+          <div class="status-icon">⚠️</div>
+          <div class="status-num" id="pantryLowCount">0</div>
+          <div class="status-lbl">Low Stock</div>
+        </div>
+        <div class="status-card status-out">
+          <div class="status-icon">🔴</div>
+          <div class="status-num" id="pantryOutCount">0</div>
+          <div class="status-lbl">Out of Stock</div>
+        </div>
+      </div>
+
+      <div class="cd">
+        <div class="ct">🏪 Pantry Inventory</div>
+        <p class="section-desc">Track your kitchen stock. Items turning <span style="color:var(--accent-gold)">amber</span> are running low. Items in <span style="color:var(--accent-red)">red</span> need restocking.</p>
+        
+        <label class="lbl">Filter Category</label>
+        <div class="chc" id="pantryCatFilter"></div>
+
+        <div class="row" style="margin-bottom:0;gap:8px;">
+          <input type="text" class="inp" id="pantrySearch" placeholder="Search pantry items..." oninput="refreshPantryList()" style="margin-bottom:0;">
+          <select class="sel" id="pantryStockFilter" onchange="refreshPantryList()" style="max-width:140px;margin-bottom:0;">
+            <option value="all">All Status</option>
+            <option value="out">Out of Stock</option>
+            <option value="low">Low Stock</option>
+            <option value="ok">In Stock</option>
+            <option value="expiring">Expiring/Expired</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Add New Pantry Item -->
+      <div class="cd" id="pantryAddContainer">
+        <div class="ct">➕ Add New Item</div>
+        <div class="row">
+          <div class="col" style="flex:2;">
+            <label class="lbl" for="pantryNewName">Item Name</label>
+            <input type="text" class="inp" id="pantryNewName" placeholder="e.g. Coconut Oil">
+          </div>
+          <div class="col">
+            <label class="lbl" for="pantryNewCat">Category</label>
+            <select class="sel" id="pantryNewCat"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label class="lbl" for="pantryNewQty">Quantity</label>
+            <input type="number" class="inp" id="pantryNewQty" placeholder="0" min="0" step="0.1">
+          </div>
+          <div class="col">
+            <label class="lbl" for="pantryNewUnit">Unit</label>
+            <select class="sel" id="pantryNewUnit">
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="L">L (Litre)</option>
+              <option value="ml">ml</option>
+              <option value="pcs">pcs</option>
+              <option value="pkt">pkt (Packet)</option>
+            </select>
+          </div>
+          <div class="col">
+            <label class="lbl" for="pantryNewMin">Min Stock</label>
+            <input type="number" class="inp" id="pantryNewMin" placeholder="0.5" min="0" step="0.1">
+          </div>
+          <div class="col">
+            <label class="lbl" for="pantryNewPrice">₹ / Unit</label>
+            <input type="number" class="inp" id="pantryNewPrice" placeholder="0" min="0" step="1">
+          </div>
+          <div class="col">
+            <label class="lbl" for="pantryNewExpiry">Expiry Date</label>
+            <input type="date" class="inp" id="pantryNewExpiry">
+          </div>
+        </div>
+        <button class="btn btn-p btn-bl" onclick="addPantryItem()">💾 Add to Pantry</button>
+      </div>
+
+      <!-- Pantry Items Grid -->
+      <div class="cd">
+        <div class="ct" style="justify-content:space-between;">
+          <span>📋 Inventory (<span id="pantryVisibleCount">0</span>)</span>
+          <button class="btn btn-o btn-s" id="pantryResetBtn" onclick="resetPantryDefaults()">🔄 Reset Defaults</button>
+        </div>
+        <div class="pantry-grid" id="pantryGrid"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav" id="bnav" style="display:none">
+    <button class="active" onclick="showPage('pgPlanner', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Planner
+    </button>
+    <button onclick="showPage('pgDatabase', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Database
+    </button>
+    <button onclick="showPage('pgShopping', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      Shopping
+    </button>
+    <button onclick="showPage('pgPantry', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      Pantry
+    </button>
+    <button onclick="showPage('pgSettings', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+  </nav>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
+
+  <!-- POPUP: ITEM SELECTOR MODAL -->
+  <div class="modal-overlay" id="selectorModal" onclick="closeSelectorModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <h3 id="modalTitle">Select Dish</h3>
+        <button class="modal-close" onclick="closeSelectorModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-box-container">
+          <input type="text" class="inp" id="modalSearch" placeholder="Search dishes..." oninput="filterModalItems()">
+        </div>
+        <div class="quick-add-container">
+          <input type="text" class="inp" id="modalQuickAdd" placeholder="Add custom dish...">
+          <button class="btn btn-p" onclick="addAndSelectCustomDish()">Add</button>
+        </div>
+        <div class="modal-items-grid" id="modalItemsGrid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP: DAY PLAN DIALOG -->
+  <div class="modal-overlay" id="confirmModal" onclick="closeConfirmModal()">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <h3 id="confirmTitle">Confirm Action</h3>
+      <p id="confirmMessage" class="confirm-msg"></p>
+      <div class="confirm-actions">
+        <button class="btn btn-o btn-s" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-no btn-s" id="confirmExecuteBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(
+          reg => console.log('ServiceWorker registration successful with scope: ', reg.scope),
+          err => console.log('ServiceWorker registration failed: ', err)
+        );
+      });
+    }
+  </script>
+</body>
+</html>
