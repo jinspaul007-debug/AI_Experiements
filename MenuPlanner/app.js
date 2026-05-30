@@ -410,11 +410,8 @@ function login() {
     document.getElementById('bnav').style.display = 'flex';
     document.getElementById('userName').textContent = esc(user.name);
 
-    // Toggle sync visibility if configured
-    const settings = getStorage('sync_settings', {});
-    if (settings.pat) {
-      document.getElementById('headerSyncBtn').style.display = 'flex';
-    }
+    // Initialize sync UI state (shows header icon and save buttons if linked)
+    updateSyncStatusUI();
 
     // Set initial week to current week
     curWeekKey = getWeekKey(new Date());
