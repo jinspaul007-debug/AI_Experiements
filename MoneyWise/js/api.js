@@ -104,7 +104,7 @@ const GitHubAPI = {
 
     async testConnection() {
         if (!this.config.token) throw new Error('No GitHub token configured');
-        const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
+        const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}?t=${Date.now()}`;
         const res = await fetch(url, { headers: this._headers(), cache: 'no-store' });
         if (!res.ok) throw new Error(`Cannot access repo (${res.status}). Check token/username/repo.`);
         return true;
@@ -112,7 +112,8 @@ const GitHubAPI = {
 
     async _request(method, body = null) {
         if (!this.config.token) throw new Error('GitHub token not set.');
-        const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${this.config.path}`;
+        const cacheBust = method === 'GET' ? `?t=${Date.now()}` : '';
+        const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${this.config.path}${cacheBust}`;
         const options = { method, headers: this._headers(), cache: 'no-store' };
         if (body) options.body = JSON.stringify(body);
 
@@ -173,7 +174,9 @@ const GitHubAPI = {
             const bytes = CryptoJS.AES.decrypt(encryptedContent, this.config.encKey);
             const decrypted = bytes.toString(CryptoJS.enc.Utf8);
             if (!decrypted) throw new Error('DECRYPT_FAIL');
-            return JSON.parse(decrypted);
+            const parsed = JSON.parse(decrypted);
+            validateDataStructure(parsed);
+            return parsed;
         } catch (e) {
             if (e.message === 'DECRYPT_FAIL') throw new Error('Wrong encryption key. Data cannot be decrypted.');
             throw new Error('Data corrupted or wrong encryption key.');

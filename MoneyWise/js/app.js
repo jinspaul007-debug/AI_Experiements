@@ -273,6 +273,7 @@ const App = {
     },
 
     renderAll() {
+        this.updateWealthVisibility();
         this.populateDropdowns();
         this.updateDashboard();
         this.updateWealth();
@@ -725,7 +726,6 @@ const App = {
         document.getElementById('backup-full-btn').addEventListener('click', () => this.exportFullBackup());
         document.getElementById('restore-backup-btn').addEventListener('click', () => document.getElementById('restore-file-input').click());
         document.getElementById('restore-file-input').addEventListener('change', (e) => this.restoreFromBackup(e));
-        
         document.getElementById('change-pass-btn').addEventListener('click', () => {
             const oldP = document.getElementById('change-old-pass').value;
             const newP = document.getElementById('change-new-pass').value;
@@ -740,6 +740,14 @@ const App = {
             this.saveAndSync();
             document.getElementById('change-old-pass').value = '';
             document.getElementById('change-new-pass').value = '';
+        });
+
+        const wealthCheck = document.getElementById('settings-show-wealth');
+        wealthCheck.addEventListener('change', () => {
+            if (!this.data.settings) this.data.settings = {};
+            this.data.settings.showWealthPage = wealthCheck.checked;
+            this.updateWealthVisibility();
+            this.saveAndSync();
         });
     },
     
@@ -867,6 +875,23 @@ const App = {
         document.getElementById('wealth-liabilities').innerText = this.fmtMoney(w.totalLiabilities);
         
         if (document.getElementById('view-wealth').classList.contains('active')) Analytics.renderCharts(this.data);
+    },
+
+    updateWealthVisibility() {
+        const show = this.data?.settings?.showWealthPage !== false;
+        document.querySelectorAll('[data-view="wealth"]').forEach(el => {
+            el.style.display = show ? '' : 'none';
+        });
+        
+        // If wealth page is currently active but hidden, switch to dashboard
+        if (!show && document.getElementById('view-wealth').classList.contains('active')) {
+            this.switchView('dashboard');
+            document.querySelectorAll('.nav-menu li, .b-nav-item').forEach(el => {
+                el.classList.remove('active');
+                if(el.getAttribute('data-view') === 'dashboard') el.classList.add('active');
+            });
+            document.getElementById('page-title').innerText = 'Monthly Home';
+        }
     },
 
     renderTransactions() {
@@ -1010,6 +1035,11 @@ const App = {
         const pml = document.getElementById('custom-pm-list'); pml.innerHTML = '';
         const pms = this.data.settings?.paymentMethods || DEFAULT_PM;
         pms.forEach(p => { const c = document.createElement('div'); c.className='chip'; c.innerText = p; pml.appendChild(c); });
+
+        const wealthCheck = document.getElementById('settings-show-wealth');
+        if (wealthCheck) {
+            wealthCheck.checked = this.data.settings?.showWealthPage !== false;
+        }
     },
 
     /** ===== EDUCATION TRACKING ===== */

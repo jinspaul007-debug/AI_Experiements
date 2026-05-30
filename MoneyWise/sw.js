@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moneywise-v10';
+const CACHE_NAME = 'moneywise-v11';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -52,6 +52,6 @@ self.addEventListener('fetch', (e) => {
                 caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
             }
             return res;
-        }).catch(() => caches.match(e.request))
+        }).catch(() => caches.match(e.request, { ignoreSearch: true }))
     );
 });
