@@ -417,6 +417,8 @@ function login() {
     const settings = getStorage('sync_settings', {});
     if (settings.pat && settings.username && settings.repo) {
       pullFromCloud(true);
+    } else if (settings.pat && (!settings.username || !settings.repo)) {
+      toast('⚠️ GitHub config incomplete. Please re-link in Settings.');
     }
 
     // Set initial week to current week
@@ -1405,8 +1407,12 @@ function updateSyncStatusUI(status, isError) {
 
   const sync = getStorage('sync_settings', {});
 
-  if (!sync.pat) {
-    el.textContent = 'Not Linked (Local Storage Only)';
+  if (!sync.pat || !sync.username || !sync.repo) {
+    if (sync.pat && !sync.username) {
+      el.textContent = '⚠️ Repo configuration missing. Please re-link.';
+    } else {
+      el.textContent = 'Not Linked (Local Storage Only)';
+    }
     el.className = 'sync-status';
     const syncBtn = document.getElementById('headerSyncBtn');
     if (syncBtn) syncBtn.style.display = 'none';
@@ -1538,7 +1544,10 @@ function mergeRemoteData(remote) {
 
 async function pullFromCloud(silent = false) {
   const sync = getStorage('sync_settings', {});
-  if (!sync.pat || !sync.username || !sync.repo) return;
+  if (!sync.pat || !sync.username || !sync.repo) {
+    if (!silent) toast('⚠️ Cloud sync not fully configured');
+    return;
+  }
   if (!silent) updateSyncStatusUI('Pulling latest from GitHub...', false);
 
   try {
@@ -1583,7 +1592,10 @@ async function pullFromCloud(silent = false) {
 
 async function pushToCloud(silent = false, retry = false) {
   const sync = getStorage('sync_settings', {});
-  if (!sync.pat || !sync.username || !sync.repo) return;
+  if (!sync.pat || !sync.username || !sync.repo) {
+    if (!silent) toast('⚠️ Cloud sync not fully configured');
+    return;
+  }
   if (!silent) updateSyncStatusUI('Pushing to GitHub...', false);
 
   try {
