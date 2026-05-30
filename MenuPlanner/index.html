@@ -311,7 +311,7 @@
       <!-- About metadata -->
       <div class="cd about-card">
         <div class="ct">ℹ️ About MenuPlanner</div>
-        <p><strong>MenuPlanner v1.2</strong></p>
+        <p><strong>MenuPlanner v1.4.1</strong></p>
         <p>Developed with support for offline storage and secure cross-device sync. Optimized for Safari, Chrome, Edge, iOS, and Android.</p>
         <p style="font-size: 13px; color: var(--text-sub); margin-top: 5px;">A secure, offline-first household management tool integrating weekly meal planning, dynamic shopping list generation, and comprehensive pantry stock/expiry tracking.</p>
         <button class="btn btn-no-outline btn-s" onclick="logout()" style="margin-top: 10px;">🔐 Logout</button>
@@ -482,10 +482,30 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(
-          reg => console.log('ServiceWorker registration successful with scope: ', reg.scope),
-          err => console.log('ServiceWorker registration failed: ', err)
-        );
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          console.log('ServiceWorker registration successful:', reg.scope);
+          
+          // Detect if a new service worker is installed and waiting
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New update available, force reload to get it
+                console.log('New update available, reloading...');
+                window.location.reload();
+              }
+            });
+          });
+        }).catch(err => console.log('ServiceWorker registration failed: ', err));
+        
+        // Ensure any existing waiting SW takes over immediately
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   </script>

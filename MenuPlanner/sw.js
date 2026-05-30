@@ -34,23 +34,18 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cachedResponse => {
-      if (cachedResponse) return cachedResponse;
-      return fetch(e.request).then(response => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-        // Cache new static assets dynamically if appropriate
-        if (e.request.url.startsWith(self.location.origin)) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(e.request, responseToCache);
-          });
-        }
-        return response;
-      }).catch(() => {
-        // Return fallback or offline message if network is down and resource is not cached
-      });
+    fetch(e.request).then(response => {
+      // If we got a valid network response, cache it and return it
+      if (response && response.status === 200 && response.type === 'basic') {
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(e.request, responseToCache);
+        });
+      }
+      return response;
+    }).catch(() => {
+      // If network fails, fallback to cache
+      return caches.match(e.request);
     })
   );
 });
