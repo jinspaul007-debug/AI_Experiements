@@ -1461,8 +1461,10 @@ input, select, textarea, button {
 /* Shopping Tabs */
 .shop-tabs-container {
   display: flex;
-  background-color: var(--bg-main);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-card);
+  border-bottom: 2px solid var(--border);
+  gap: 8px;
+  padding: 10px 10px 0 10px;
 }
 
 .shop-tab {
@@ -1470,9 +1472,12 @@ input, select, textarea, button {
   text-align: center;
   padding: 14px 10px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-muted);
-  border-bottom: 3px solid transparent;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
   transition: all 0.2s ease;
   user-select: none;
 }
@@ -1483,10 +1488,10 @@ input, select, textarea, button {
 }
 
 .shop-tab.active {
-  color: var(--accent-green);
+  color: var(--bg-main);
   font-weight: 700;
-  border-bottom: 3px solid var(--accent-green);
-  background-color: rgba(72, 166, 72, 0.08);
+  background-color: var(--accent-green);
+  border-color: var(--accent-green);
 }
 
 /* Media Breakpoints */

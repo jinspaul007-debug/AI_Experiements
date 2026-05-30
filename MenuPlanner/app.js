@@ -1632,6 +1632,10 @@ function mergeRemoteData(remote) {
     setStorage('active_shopping_list', remote.active_shopping_list);
   }
   if (remote.pantry) setStorage('pantry', remote.pantry);
+
+  // Guarantee schema upgrades and cleanup after fetching from cloud
+  migratePantryData();
+  clearOldAutoInjectedPlannerItems();
 }
 
 async function pullFromCloud(silent = false) {
