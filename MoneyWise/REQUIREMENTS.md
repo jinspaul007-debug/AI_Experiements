@@ -15,6 +15,12 @@
 - **NEW: Wealth Visibility Toggle (Default: Hidden):** Added a "Privacy Settings" switch in Settings to toggle visibility of the Net Worth/Wealth pages. The Wealth tab is **hidden by default** for all users — it only appears when the admin explicitly enables "Show Wealth / Net Worth tab" in Settings. Hiding removes the tab from both sidebar and bottom navigation. Existing users are unaffected: no data is modified, only the UI visibility is controlled.
 - **Versioning:** api.js v5.1, app.js v5.1, analytics.js v2.0, SW cache v11, script tags ?v=51
 
+### v5.5 - Asset Portfolio Enhancements
+- **NEW: Asset Tracking Logic:** 
+  - Market assets (Mutual Funds, Shares) now prominently highlight the **Invested Amount** instead of the Current Value on their portfolio cards, since current values are unpredictable.
+  - The "Date" field is now available for all asset types, allowing users to tag when they started investing in market funds.
+- **Versioning:** app.js v5.5
+
 ### v5.4 - Advanced Chitti Tracking
 - **NEW: Chitti Enhancements:** The KSFE Chitti tracker now distinguishes between 'Prized' (acts as a liability) and 'Non-Prized' (acts as an asset). It calculates and displays the remaining months and an estimated remaining total payment based on the average payment made so far. Added manual entry fields for "Months Paid" and "Total Amount Paid" in the creation/edit form.
 - **Versioning:** app.js v5.4

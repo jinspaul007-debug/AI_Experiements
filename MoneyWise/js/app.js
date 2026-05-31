@@ -587,11 +587,11 @@ const App = {
                 name: document.getElementById('asset-name').value, 
                 owner: document.getElementById('asset-owner').value,
                 invested: parseFloat(document.getElementById('asset-invested').value), 
-                currentValue: parseFloat(document.getElementById('asset-current').value)
+                currentValue: parseFloat(document.getElementById('asset-current').value),
+                investedDate: document.getElementById('asset-date').value
             };
 
             if (['Fixed Deposit', 'Bond', 'PF', 'NPS', 'PPF', 'Gold', 'Real Estate'].includes(type)) {
-                newAsset.investedDate = document.getElementById('asset-date').value;
                 newAsset.interestRate = parseFloat(document.getElementById('asset-rate').value || 0);
                 newAsset.maturityMonths = parseInt(document.getElementById('asset-months').value || 0);
                 newAsset.maturityValue = parseFloat(document.getElementById('asset-maturity-value').value || 0);
@@ -1075,10 +1075,11 @@ const App = {
         const aList = document.getElementById('assets-list'); aList.innerHTML = '';
         (this.data.assets || []).forEach(a => {
             const gain = a.currentValue - a.invested;
-            let sub2 = `Gain: ${gain>=0?'+':''}${this.fmtMoney(gain)}`;
+            let sub2 = `Current: ${this.fmtMoney(a.currentValue)} | Gain: ${gain>=0?'+':''}${this.fmtMoney(gain)}`;
+            if (a.investedDate) sub2 += ` | Date: ${a.investedDate}`;
             if (a.interestRate) sub2 += ` | Rate: ${a.interestRate}%`;
             
-            aList.appendChild(createItem('fa-chart-line', 'success', a.name, a.type, `Owner: ${a.owner} | Invested: ${this.fmtMoney(a.invested)}`, sub2, this.fmtMoney(a.currentValue), '', a.id, 'assets'));
+            aList.appendChild(createItem('fa-chart-line', 'success', a.name, a.type, `Owner: ${a.owner}`, sub2, this.fmtMoney(a.invested), '', a.id, 'assets'));
         });
 
         const cList = document.getElementById('chitti-list'); cList.innerHTML = '';
