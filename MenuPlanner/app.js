@@ -353,11 +353,12 @@ function getDatesForWeek(weekKey) {
 
   const firstJan = new Date(year, 0, 1);
   const startDay = (firstJan.getDay() + 7) % 7;
-  const firstSunday = new Date(year, 0, 1 - startDay);
-
-  const weekStart = new Date(firstSunday.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+  
+  // Use setDate to safely handle Daylight Saving Time (DST) transitions
+  const weekStart = new Date(year, 0, 1 - startDay);
+  weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
+  
   const dates = [];
-
   for (let i = 0; i < 7; i++) {
     const dayDate = new Date(weekStart.getTime());
     dayDate.setDate(weekStart.getDate() + i);
@@ -699,6 +700,21 @@ function getWeekData(weekKey) {
       }
     }));
     setStorage('weekly_plans', allWeeks);
+  } else {
+    // Auto-heal corrupted dates from previous timezone bug
+    const dates = getDatesForWeek(weekKey);
+    let needsFix = false;
+    allWeeks[weekKey].forEach((day, idx) => {
+      const correctDate = getLocalDateString(dates[idx]);
+      if (day.date !== correctDate) {
+        day.date = correctDate;
+        needsFix = true;
+      }
+    });
+    if (needsFix) {
+      setStorage('weekly_plans', allWeeks);
+      triggerAutoSync();
+    }
   }
   return allWeeks[weekKey];
 }
