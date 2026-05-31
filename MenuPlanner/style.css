@@ -1515,6 +1515,45 @@ input, select, textarea, button {
   }
 }
 
+/* Alphabet Navigation */
+.alpha-nav-container {
+  display: flex;
+  overflow-x: auto;
+  padding: 8px 4px;
+  margin: 10px 0;
+  gap: 4px;
+  background-color: var(--bg-main);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  scrollbar-width: none;
+}
+.alpha-nav-container::-webkit-scrollbar {
+  display: none;
+}
+
+.alpha-letter {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  user-select: none;
+  transition: all 0.2s ease;
+  min-width: 24px;
+  text-align: center;
+}
+
+.alpha-letter:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.alpha-letter.active {
+  background-color: var(--accent-green);
+  color: var(--bg-main);
+}
+
 /* Print / PDF Export Styles */
 @media print {
   body {

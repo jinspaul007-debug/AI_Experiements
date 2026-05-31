@@ -248,6 +248,22 @@ let modalTarget = {
   slotKey: null
 };
 
+// Alphabet Filters
+let dbAlphaFilter = 'All';
+let shopAlphaFilter = 'All';
+let pantryAlphaFilter = 'All';
+
+// --- Alphabet Navigation Utility ---
+function buildAlphaNav(containerId, activeFilter, clickHandlerName) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const letters = ['All', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
+  container.innerHTML = letters.map(letter => {
+    const isActive = activeFilter === letter ? 'active' : '';
+    return `<div class="alpha-letter ${isActive}" onclick="${clickHandlerName}('${letter}')">${letter}</div>`;
+  }).join('');
+}
+
 // --- Utility: XSS-safe text escaping ---
 function esc(str) {
   if (!str) return '';
@@ -524,8 +540,19 @@ function refreshDbList() {
   if (!listUl) return;
   listUl.innerHTML = '';
 
+  buildAlphaNav('dbAlphaNav', dbAlphaFilter, 'setDbAlphaFilter');
+
+  // Sort A-Z by default
+  dishes.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
   let count = 0;
   dishes.forEach((d, idx) => {
+    // Apply A-Z Filter
+    if (dbAlphaFilter !== 'All') {
+      const firstChar = d.name.charAt(0).toUpperCase();
+      if (firstChar !== dbAlphaFilter) return;
+    }
+
     const matchesSearch = d.name.toLowerCase().includes(search);
     const matchesCat = filterCat === 'all' || d.cat === filterCat;
 
@@ -1086,10 +1113,20 @@ function refreshShoppingPage() {
   if (!checklistContainer) return;
   checklistContainer.innerHTML = '';
 
-  const activeItems = shop[currentShopTab] || [];
+  buildAlphaNav('shopAlphaNav', shopAlphaFilter, 'setShopAlphaFilter');
+
+  let activeItems = shop[currentShopTab] || [];
+  
+  // Sort A-Z by default
+  activeItems.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  
+  // Apply A-Z Filter
+  if (shopAlphaFilter !== 'All') {
+    activeItems = activeItems.filter(it => it.name.charAt(0).toUpperCase() === shopAlphaFilter);
+  }
   
   if (activeItems.length === 0) {
-    checklistContainer.innerHTML = '<p class="empty-state-msg">📋 No items in this list.</p>';
+    checklistContainer.innerHTML = '<p class="empty-state-msg">📋 No items found matching filters.</p>';
   } else {
     const renderItem = (it) => {
       const div = document.createElement('div');
@@ -2551,10 +2588,27 @@ function refreshPantryList() {
   const grid = document.getElementById('pantryGrid');
   if (!grid) return;
   grid.innerHTML = '';
+  
+  buildAlphaNav('pantryAlphaNav', pantryAlphaFilter, 'setPantryAlphaFilter');
 
   let visibleCount = 0;
+  const datalist = document.getElementById('pantryItemNames');
+  if (datalist) datalist.innerHTML = '';
+
+  // Sort A-Z by default
+  items.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   items.forEach((item, idx) => {
+    // Apply A-Z Filter
+    if (pantryAlphaFilter !== 'All') {
+      const firstChar = item.name.charAt(0).toUpperCase();
+      if (firstChar !== pantryAlphaFilter) return;
+    }
+
+    if (datalist) {
+      datalist.innerHTML += `<option value="${esc(item.name)}"></option>`;
+    }
+
     const matchSearch = item.name.toLowerCase().includes(search);
     const matchCat = filterCat === 'all' || item.cat === filterCat;
     const status = getStockStatus(item);
@@ -2619,11 +2673,33 @@ function refreshPantryList() {
   });
 
   if (visibleCount === 0) {
-    grid.innerHTML = '<div class="pantry-empty">No items match your filters. Try adjusting category or search.</div>';
+    grid.innerHTML = '<div class="pantry-empty">No items match your filters or selected letter.</div>';
   }
 
   const countEl = document.getElementById('pantryVisibleCount');
   if (countEl) countEl.textContent = visibleCount;
+}
+
+function setPantryAlphaFilter(letter) {
+  pantryAlphaFilter = letter;
+  refreshPantryList();
+}
+
+function checkPantryItemExists() {
+  const inputEl = document.getElementById('pantryNewName');
+  const alertEl = document.getElementById('pantryItemAlert');
+  if (!inputEl || !alertEl) return;
+  
+  const name = inputEl.value.trim().toLowerCase();
+  const items = getPantryItems();
+  const existing = items.find(x => x.name.toLowerCase() === name);
+  
+  if (existing) {
+    alertEl.innerHTML = `🟢 <b>Exists:</b> Stock is currently ${existing.qty} ${esc(existing.unit)}. (Adding will prompt to update)`;
+    alertEl.style.display = 'block';
+  } else {
+    alertEl.style.display = 'none';
+  }
 }
 
 function getQtyStep(idx) {
@@ -2678,11 +2754,33 @@ function addPantryItem() {
   const expiryEl = document.getElementById('pantryNewExpiry');
 
   const name = nameEl ? nameEl.value.trim() : '';
-  if (!name) { toast('\u26a0\ufe0f Enter item name'); return; }
+  if (!name) { toast('⚠️ Enter item name'); return; }
 
   const items = getPantryItems();
-  if (items.find(x => x.name.toLowerCase() === name.toLowerCase())) {
-    toast('\u26a0\ufe0f Item already exists'); return;
+  const existingIdx = items.findIndex(x => x.name.toLowerCase() === name.toLowerCase());
+  
+  const qtyToAdd = qtyEl ? parseFloat(qtyEl.value) || 0 : 0;
+
+  if (existingIdx !== -1) {
+    const existing = items[existingIdx];
+    const wantUpdate = confirm(`'${name}' already exists in your pantry (Current Stock: ${existing.qty} ${existing.unit}).\n\nDo you want to add ${qtyToAdd} to its stock and update its details?`);
+    if (wantUpdate) {
+      existing.qty = Math.round((existing.qty + qtyToAdd) * 100) / 100;
+      if (catEl) existing.cat = catEl.value;
+      if (unitEl && unitEl.value) existing.unit = unitEl.value;
+      if (minEl && minEl.value) existing.minStock = parseFloat(minEl.value) || existing.minStock;
+      if (priceEl && priceEl.value) existing.price = parseFloat(priceEl.value) || existing.price;
+      if (expiryEl && expiryEl.value) existing.expiryDate = expiryEl.value;
+      existing.lastUpdated = new Date().toISOString().split('T')[0];
+      
+      savePantryItems(items);
+      clearPantryInputs(nameEl, qtyEl, minEl, priceEl, expiryEl);
+      refreshPantryPage();
+      toast('✅ Item updated successfully');
+      return;
+    } else {
+      return; // Cancelled by user
+    }
   }
 
   items.push({

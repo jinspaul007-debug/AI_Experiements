@@ -105,6 +105,8 @@
           <!-- Populated dynamically -->
         </div>
 
+        <div class="alpha-nav-container" id="dbAlphaNav"></div>
+
         <div class="search-box-container">
           <input type="text" class="inp" id="dbSearch" placeholder="Search dishes..." oninput="refreshDbList()">
         </div>
@@ -206,6 +208,8 @@
             </div>
           </div>
           
+          <div class="alpha-nav-container" id="shopAlphaNav"></div>
+
           <div class="shopping-sections" id="shoppingChecklist">
             <!-- Populated dynamically -->
           </div>
@@ -356,6 +360,8 @@
         <label class="lbl">Filter Category</label>
         <div class="chc" id="pantryCatFilter"></div>
 
+        <div class="alpha-nav-container" id="pantryAlphaNav"></div>
+
         <div class="row" style="margin-bottom:0;gap:8px;">
           <input type="text" class="inp" id="pantrySearch" placeholder="Search pantry items..." oninput="refreshPantryList()" style="margin-bottom:0;">
           <select class="sel" id="pantryStockFilter" onchange="refreshPantryList()" style="max-width:140px;margin-bottom:0;">
@@ -372,9 +378,11 @@
       <div class="cd" id="pantryAddContainer">
         <div class="ct">➕ Add New Item</div>
         <div class="row">
-          <div class="col" style="flex:2;">
+          <div class="col" style="flex: 2;">
             <label class="lbl" for="pantryNewName">Item Name</label>
-            <input type="text" class="inp" id="pantryNewName" placeholder="e.g. Coconut Oil">
+            <input type="text" class="inp" id="pantryNewName" placeholder="e.g. Coconut Oil" list="pantryItemNames" oninput="checkPantryItemExists()">
+            <datalist id="pantryItemNames"></datalist>
+            <div id="pantryItemAlert" style="display:none; color: var(--accent-green); font-size: 13px; margin-top: 4px;"></div>
           </div>
           <div class="col">
             <label class="lbl" for="pantryNewCat">Category</label>
