@@ -79,6 +79,7 @@ const MAJOR_CATEGORIES = {
 const DEFAULT_PM = ['Cash', 'UPI', 'Debit Card', 'Amazon Pay', 'Credit Card'];
 
 const App = {
+    editingTransId: null,
     data: null, currentUser: null, currencySymbol: '₹', budgetView: 'monthly',
 
     async init() {
@@ -509,8 +510,9 @@ const App = {
             const amount = parseFloat(document.getElementById('entry-amount').value);
             const targetVal = document.getElementById('entry-target').value;
             
+            const isEdit = !!App.editingTransId;
             const newEntry = {
-                id: Date.now().toString(),
+                id: App.editingTransId || Date.now().toString(),
                 type: type,
                 amount: amount,
                 date: document.getElementById('entry-date').value,
@@ -554,10 +556,21 @@ const App = {
             }
 
             if (!this.data.transactions) this.data.transactions = [];
-            this.data.transactions.unshift(newEntry);
+            if (isEdit) {
+                const idx = this.data.transactions.findIndex(t => t.id === App.editingTransId);
+                if (idx !== -1) {
+                    newEntry.timestamp = this.data.transactions[idx].timestamp || newEntry.timestamp;
+                    this.data.transactions[idx] = newEntry;
+                }
+                App.editingTransId = null;
+                const btn = document.querySelector('#entry-form button[type="submit"]');
+                if (btn) btn.innerText = 'Save Record';
+            } else {
+                this.data.transactions.unshift(newEntry);
+            }
 
             this.closeModal('add-modal'); e.target.reset();
-            toast('Record saved successfully!');
+            toast(isEdit ? 'Record updated successfully!' : 'Record saved successfully!');
             this.saveAndSync();
         });
 
@@ -927,7 +940,10 @@ const App = {
             div.innerHTML = `<div class="list-icon ${color}"><i class="fa-solid ${icon}"></i></div>
                 <div class="list-details"><div class="list-title">${sanitize(tx.description) || catText} <span class="badge badge-outline">${sanitize(tx.paymentMethod)}</span></div><div class="list-subtitle">${sanitize(tx.date)} • ${sanitize(tx.whoPaid) || 'Admin'}</div></div>
                 <div style="text-align:right"><div class="list-amount ${color}">${sign}${this.fmtMoney(tx.amount)}</div>
-                <button class="btn-icon-small" style="width:24px;height:24px; font-size:10px; display:inline-flex; margin-top:4px;" onclick="App.deleteItem('transactions', '${sanitize(tx.id)}')"><i class="fa-solid fa-trash"></i></button></div>`;
+                <div style="margin-top:4px;">
+                <button class="btn-icon-small" style="width:24px;height:24px; font-size:10px; display:inline-flex;" onclick="App.editTransaction('${sanitize(tx.id)}')" title="Edit"><i class="fa-solid fa-pencil"></i></button>
+                <button class="btn-icon-small" style="width:24px;height:24px; font-size:10px; display:inline-flex;" onclick="App.deleteItem('transactions', '${sanitize(tx.id)}')"><i class="fa-solid fa-trash"></i></button>
+                </div></div>`;
             list.appendChild(div);
         });
     },
@@ -1188,6 +1204,38 @@ const App = {
         const ok = await mConfirm(`Delete <strong>${sanitize(itemName)}</strong> permanently?`, 'Delete Item');
         if (!ok) return;
         this.data[collection] = this.data[collection].filter(x => x.id !== id); this.saveAndSync();
+    },
+
+    editTransaction(id) {
+        const tx = this.data.transactions.find(t => t.id === id);
+        if(!tx) return;
+        App.editingTransId = id;
+        
+        this.openModal('add-modal');
+        
+        const tabs = document.querySelectorAll('#record-tabs .tab');
+        tabs.forEach(t => t.classList.remove('active'));
+        const tab = document.querySelector(`#record-tabs .tab[data-tab="${tx.type}"]`);
+        if(tab) tab.classList.add('active');
+        document.getElementById('entry-type').value = tx.type;
+        this.updateEntryCategoryDropdowns();
+        
+        document.getElementById('entry-amount').value = tx.amount;
+        document.getElementById('entry-date').value = tx.date;
+        document.getElementById('entry-pm').value = tx.paymentMethod;
+        document.getElementById('entry-who').value = tx.whoPaid;
+        document.getElementById('entry-desc').value = tx.description || '';
+        
+        if(tx.type === 'investment' || tx.type === 'emi') {
+            document.getElementById('entry-target').value = (tx.type==='emi'?'L_':'A_') + tx.targetId;
+        } else {
+            document.getElementById('entry-major-cat').value = tx.category;
+            this.updateMinorCategoryDropdown();
+            document.getElementById('entry-minor-cat').value = tx.minorCategory || 'None';
+        }
+        
+        const btn = document.querySelector('#entry-form button[type="submit"]');
+        if(btn) btn.innerText = 'Update Record';
     },
 
     /** Export entire database as a downloadable JSON file */
