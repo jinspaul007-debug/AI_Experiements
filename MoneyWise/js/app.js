@@ -623,14 +623,13 @@ const App = {
                 months: parseInt(document.getElementById('chitti-months').value),
                 owner: document.getElementById('chitti-owner').value, 
                 status: document.getElementById('chitti-status').value,
-                paidSoFar: 0, installmentsPaid: 0
+                installmentsPaid: parseInt(document.getElementById('chitti-installments-paid').value || 0),
+                paidSoFar: parseFloat(document.getElementById('chitti-paid-so-far').value || 0)
             };
             
             if (this.editingCollection === 'chittis' && this.editingItemId) {
                 const idx = this.data.chittis.findIndex(c => c.id === this.editingItemId);
                 if(idx !== -1) {
-                    newChitti.paidSoFar = this.data.chittis[idx].paidSoFar;
-                    newChitti.installmentsPaid = this.data.chittis[idx].installmentsPaid;
                     this.data.chittis[idx] = newChitti;
                 }
             } else {
@@ -1084,7 +1083,17 @@ const App = {
 
         const cList = document.getElementById('chitti-list'); cList.innerHTML = '';
         (this.data.chittis || []).forEach(c => {
-            cList.appendChild(createItem('fa-hand-holding-dollar', 'warning', c.name, c.status, `Owner: ${c.owner}`, `Paid: ${c.installmentsPaid}/${c.months} Months`, this.fmtMoney(c.paidSoFar), `Sala: ${this.fmtMoney(c.sala)}`, c.id, 'chittis'));
+            const remMonths = Math.max(0, c.months - (c.installmentsPaid || 0));
+            const avgPayment = (c.installmentsPaid > 0) ? (c.paidSoFar / c.installmentsPaid) : (c.sala / c.months);
+            const estRem = remMonths * avgPayment;
+            
+            let statusBadge = c.status === 'Prized' ? '<span class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Prized (Liability)</span>' : 'Non-Prized (Asset)';
+            let titleBadge = c.status === 'Prized' ? 'Prized' : c.status;
+            let iconColor = c.status === 'Prized' ? 'danger' : 'warning';
+            
+            const sub2 = `Paid: ${c.installmentsPaid || 0}/${c.months} Mo | Rem: ~${this.fmtMoney(estRem)} (${remMonths} Mo)`;
+            
+            cList.appendChild(createItem('fa-hand-holding-dollar', iconColor, c.name, titleBadge, `Owner: ${c.owner} | Sala: ${this.fmtMoney(c.sala)}`, sub2, this.fmtMoney(c.paidSoFar), statusBadge, c.id, 'chittis'));
         });
 
         const lList = document.getElementById('liabilities-list'); lList.innerHTML = '';
@@ -1435,6 +1444,8 @@ const App = {
             document.getElementById('chitti-months').value = item.months;
             document.getElementById('chitti-owner').value = item.owner;
             document.getElementById('chitti-status').value = item.status;
+            document.getElementById('chitti-installments-paid').value = item.installmentsPaid || 0;
+            document.getElementById('chitti-paid-so-far').value = item.paidSoFar || 0;
             const btn = document.querySelector('#chitti-form button[type="submit"]');
             if(btn) btn.innerText = 'Update Chitti';
             this.openModal('modal-chitti');
