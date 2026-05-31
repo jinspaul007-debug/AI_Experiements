@@ -108,7 +108,8 @@
         <div class="alpha-nav-container" id="dbAlphaNav"></div>
 
         <div class="search-box-container">
-          <input type="text" class="inp" id="dbSearch" placeholder="Search dishes..." oninput="refreshDbList()">
+          <input type="text" class="inp" id="dbSearch" placeholder="Search dishes..." list="dbItemNames" oninput="refreshDbList()">
+          <datalist id="dbItemNames"></datalist>
         </div>
       </div>
 
@@ -363,7 +364,7 @@
         <div class="alpha-nav-container" id="pantryAlphaNav"></div>
 
         <div class="row" style="margin-bottom:0;gap:8px;">
-          <input type="text" class="inp" id="pantrySearch" placeholder="Search pantry items..." oninput="refreshPantryList()" style="margin-bottom:0;">
+          <input type="text" class="inp" id="pantrySearch" placeholder="Search pantry items..." list="pantryItemNames" oninput="refreshPantryList()" style="margin-bottom:0;">
           <select class="sel" id="pantryStockFilter" onchange="refreshPantryList()" style="max-width:140px;margin-bottom:0;">
             <option value="all">All Status</option>
             <option value="out">Out of Stock</option>

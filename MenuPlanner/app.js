@@ -313,6 +313,14 @@ function setStorage(key, val) {
   }
 }
 
+// --- Date Helper for Local Timezone ---
+function getLocalDateString(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // --- Week computation helpers ---
 function getWeekDetails(date) {
   const target = new Date(date.valueOf());
@@ -542,6 +550,14 @@ function refreshDbList() {
 
   buildAlphaNav('dbAlphaNav', dbAlphaFilter, 'setDbAlphaFilter');
 
+  const datalist = document.getElementById('dbItemNames');
+  if (datalist) {
+    datalist.innerHTML = '';
+    dishes.forEach(d => {
+      datalist.innerHTML += `<option value="${esc(d.name)}"></option>`;
+    });
+  }
+
   // Sort A-Z by default
   dishes.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
@@ -672,7 +688,7 @@ function getWeekData(weekKey) {
     const dates = getDatesForWeek(weekKey);
     allWeeks[weekKey] = DAYS_OF_WEEK.map((name, idx) => ({
       dayName: name,
-      date: dates[idx].toISOString().split('T')[0],
+      date: getLocalDateString(dates[idx]),
       meals: {
         breakfast: { main: '', curry: '', protein: '', addon: '' },
         kidsnacks: { main: '', salad: '', fruits: '', vegetables: '', addon: '' },
@@ -715,8 +731,8 @@ function refreshPlanner() {
 
   container.innerHTML = '';
 
-  // Check if today is within this week
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Check if today is within this week using Local Timezone
+  const todayStr = getLocalDateString(new Date());
 
   weekData.forEach((day, dayIdx) => {
     const dayDate = new Date(day.date + 'T00:00:00');
@@ -1453,28 +1469,22 @@ function changeUserPassword() {
 
 // --- Import / Export ---
 function exportDataJSON() {
-  const data = {
-    _app: 'MenuPlanner',
-    _version: '1.2',
-    _exportDate: new Date().toISOString(),
+  const exportObj = {
+    app_version: '1.4.1',
+    _exportDate: new Date().toLocaleString(),
     users: getStorage('users', DEFAULT_USERS),
     dishes: getDbDishes(),
     weekly_plans: getStorage('weekly_plans', {}),
-    shopping_lists: getStorage('shopping_lists', {}),
-    pantry: getStorage('pantry', [])
-    // Note: sync_settings excluded from export for security (contains PAT)
+    active_shopping_list: getActiveShoppingList(),
+    pantry: getStorage('pantry', DEFAULT_PANTRY_ITEMS)
   };
 
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `menuplanner_backup_${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(a);
+  a.href = dataStr;
+  a.download = `menuplanner_backup_${getLocalDateString(new Date())}.json`;
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-
-  toast('📥 Data backup exported!');
+  toast('📥 Backup exported successfully');
 }
 
 function importDataJSON(e) {
@@ -2592,8 +2602,15 @@ function refreshPantryList() {
   buildAlphaNav('pantryAlphaNav', pantryAlphaFilter, 'setPantryAlphaFilter');
 
   let visibleCount = 0;
+  
+  // Populate datalist with ALL items regardless of Alpha Filter so auto-suggest always works globally
   const datalist = document.getElementById('pantryItemNames');
-  if (datalist) datalist.innerHTML = '';
+  if (datalist) {
+    datalist.innerHTML = '';
+    items.forEach(item => {
+      datalist.innerHTML += `<option value="${esc(item.name)}"></option>`;
+    });
+  }
 
   // Sort A-Z by default
   items.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -2603,10 +2620,6 @@ function refreshPantryList() {
     if (pantryAlphaFilter !== 'All') {
       const firstChar = item.name.charAt(0).toUpperCase();
       if (firstChar !== pantryAlphaFilter) return;
-    }
-
-    if (datalist) {
-      datalist.innerHTML += `<option value="${esc(item.name)}"></option>`;
     }
 
     const matchSearch = item.name.toLowerCase().includes(search);
@@ -2716,7 +2729,7 @@ function updatePantryQty(idx, delta) {
   const items = getPantryItems();
   if (!items[idx]) return;
   items[idx].qty = Math.max(0, Math.round((items[idx].qty + delta) * 100) / 100);
-  items[idx].lastUpdated = new Date().toISOString().split('T')[0];
+  items[idx].lastUpdated = getLocalDateString(new Date());
   savePantryItems(items);
   refreshPantryPage();
 }
@@ -2771,7 +2784,7 @@ function addPantryItem() {
       if (minEl && minEl.value) existing.minStock = parseFloat(minEl.value) || existing.minStock;
       if (priceEl && priceEl.value) existing.price = parseFloat(priceEl.value) || existing.price;
       if (expiryEl && expiryEl.value) existing.expiryDate = expiryEl.value;
-      existing.lastUpdated = new Date().toISOString().split('T')[0];
+      existing.lastUpdated = getLocalDateString(new Date());
       
       savePantryItems(items);
       clearPantryInputs(nameEl, qtyEl, minEl, priceEl, expiryEl);
@@ -2791,7 +2804,7 @@ function addPantryItem() {
     minStock: minEl ? parseFloat(minEl.value) || 0.5 : 0.5,
     price: priceEl ? parseFloat(priceEl.value) || 0 : 0,
     expiryDate: expiryEl ? expiryEl.value : '',
-    lastUpdated: new Date().toISOString().split('T')[0]
+    lastUpdated: getLocalDateString(new Date())
   });
 
   savePantryItems(items);
@@ -2850,16 +2863,15 @@ function escapeCSV(str) {
 function exportPlannerCSV() {
   const titleEl = document.getElementById('plannerWeekTitle');
   const weekId = titleEl ? titleEl.textContent.replace(', ', '-') : 'MenuPlan';
-  const plan = getStorage('weekly_plans', {})[curWeekKey] || {};
+  const plan = getWeekData(curWeekKey);
   let csv = 'Day,Slot,Dish Name\n';
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const slots = ['Breakfast', 'Lunch', 'Dinner'];
   
-  days.forEach(day => {
-    slots.forEach(slot => {
-      const dish = plan[`${day.toLowerCase()}-${slot.toLowerCase()}`];
-      csv += `${day},${slot},${escapeCSV(dish ? dish.name : '')}\n`;
-    });
+  plan.forEach(day => {
+    for (const [mealKey, meals] of Object.entries(day.meals)) {
+      for (const [slotKey, dishName] of Object.entries(meals)) {
+        csv += `${day.dayName},${mealKey}-${slotKey},${escapeCSV(dishName)}\n`;
+      }
+    }
   });
   
   downloadCSV(csv, `${weekId.replace(/\s+/g, '_')}.csv`);
@@ -2894,7 +2906,7 @@ function exportPantryCSV() {
     csv += `${escapeCSV(i.name)},${escapeCSV(i.cat || i.category)},${i.qty},${i.minStock},${i.unit},${i.price || 0},${i.expiryDate || ''},${status}\n`;
   });
   
-  const dateStr = new Date().toISOString().split('T')[0];
+  const dateStr = getLocalDateString(new Date());
   downloadCSV(csv, `PantryInventory_${dateStr}.csv`);
   toast('📥 Excel/CSV downloaded');
 }
