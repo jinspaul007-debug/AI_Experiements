@@ -15,6 +15,11 @@
 - **NEW: Wealth Visibility Toggle (Default: Hidden):** Added a "Privacy Settings" switch in Settings to toggle visibility of the Net Worth/Wealth pages. The Wealth tab is **hidden by default** for all users — it only appears when the admin explicitly enables "Show Wealth / Net Worth tab" in Settings. Hiding removes the tab from both sidebar and bottom navigation. Existing users are unaffected: no data is modified, only the UI visibility is controlled.
 - **Versioning:** api.js v5.1, app.js v5.1, analytics.js v2.0, SW cache v11, script tags ?v=51
 
+### v5.3 - Monthly Budget Planner & Portfolio Editing
+- **NEW: Monthly Budget Planner:** Budgets are now tracked on a month-by-month basis instead of a single global configuration (`App.data.monthlyBudgets`). Added Expected Income tracking, Month selectors, and the ability to copy the previous month's budget plan for rapid allocation. Supports adding one-off expenses (like birthdays or insurances) to specific months without affecting other months.
+- **NEW: Portfolio Editing:** Extended the edit functionality (introduced in v5.2 for transactions) to Banks, Assets, Chittis, and Liabilities. Users can now click the pencil icon on any portfolio item to update its values (e.g. reconciling a bank balance at the start of the month) without needing to delete and recreate the item.
+- **Versioning:** app.js v5.3, analytics.js v2.1
+
 ### v5.2 - Transaction Editing
 - **NEW: Edit Transactions:** Added ability to edit existing transactions without deleting them. This allows users to correct mistakes (amount, category, date, description, etc.) safely while keeping the original transaction ID and creation timestamp intact.
 - **Versioning:** app.js v5.2

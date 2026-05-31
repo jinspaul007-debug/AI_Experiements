@@ -305,11 +305,24 @@
                 <!-- 5. BUDGETS -->
                 <section id="view-budget" class="view">
                     <div class="tabs-wrapper" style="margin-bottom: 1.2rem; max-width: 300px;">
-                        <div class="tab active" id="budget-tab-monthly" onclick="App.setBudgetView('monthly')">Monthly</div>
-                        <div class="tab" id="budget-tab-yearly" onclick="App.setBudgetView('yearly')">Yearly</div>
+                        <div class="tab active" id="budget-tab-monthly" onclick="App.setBudgetView('monthly')">Monthly Planner</div>
+                        <div class="tab" id="budget-tab-yearly" onclick="App.setBudgetView('yearly')">Yearly Overview</div>
+                    </div>
+
+                    <!-- Month Controls -->
+                    <div id="budget-month-controls" style="margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+                        <input type="month" id="budget-month-selector" class="form-input" style="max-width: 200px;" onchange="App.renderBudgets()">
+                        <button class="btn btn-secondary" onclick="App.copyPreviousMonthBudget()" id="btn-copy-budget"><i class="fa-solid fa-copy"></i> Copy Previous</button>
                     </div>
                     <!-- Advanced Budget Analysis -->
                     <div class="dash-grid" id="budget-summary-grid">
+                        <div class="card" id="budget-income-card">
+                            <div class="stat-label">Expected Monthly Income</div>
+                            <div style="display: flex; gap: 5px; align-items: center; margin-top: 5px;">
+                                <span class="text-success" style="font-size:1.1rem; font-weight:bold;">₹</span>
+                                <input type="number" id="budget-expected-income" class="form-input" style="flex:1; padding:4px;" step="any" onchange="App.saveBudgetIncome()">
+                            </div>
+                        </div>
                         <div class="card">
                             <div class="stat-label">Total Allocated Budget</div>
                             <div class="stat-value text-primary" id="budget-total-allocated">₹0.00</div>

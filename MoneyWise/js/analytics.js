@@ -194,8 +194,31 @@ const Analytics = {
     },
 
     renderBudgetCharts(data) {
-        const budgets = data.budgets || {};
-        const cm = new Date().toISOString().slice(0,7);
+        const monthSel = document.getElementById('budget-month-selector');
+        const cm = monthSel && monthSel.value ? monthSel.value : new Date().toISOString().slice(0, 7);
+        const cy = cm.substring(0, 4);
+        
+        let budgets = {};
+        const isYearly = document.getElementById('budget-tab-yearly')?.classList.contains('active');
+
+        if (isYearly) {
+            for(let m=1; m<=12; m++) {
+                const ms = `${cy}-${String(m).padStart(2,'0')}`;
+                if (data.monthlyBudgets && data.monthlyBudgets[ms] && data.monthlyBudgets[ms].allocations) {
+                    const allocs = data.monthlyBudgets[ms].allocations;
+                    for(let key in allocs) budgets[key] = (budgets[key] || 0) + allocs[key];
+                } else if (data.budgets) {
+                    for(let key in data.budgets) budgets[key] = (budgets[key] || 0) + data.budgets[key];
+                }
+            }
+        } else {
+            if (data.monthlyBudgets && data.monthlyBudgets[cm] && data.monthlyBudgets[cm].allocations) {
+                budgets = data.monthlyBudgets[cm].allocations;
+            } else {
+                budgets = data.budgets || {};
+            }
+        }
+
         const labels = [], allocated = [], spent = [];
         Object.keys(budgets).forEach(key => {
             labels.push(key); allocated.push(budgets[key]);
@@ -204,9 +227,12 @@ const Analytics = {
             const majorCat = isMinor ? key.split(' > ')[0] : key;
             const minorCat = isMinor ? key.split(' > ')[1] : null;
             (data.transactions||[]).forEach(tx => {
-                if (tx.type === 'expense' && tx.date && tx.date.startsWith(cm)) {
-                    if (isMinor && tx.category === majorCat && tx.minorCategory === minorCat) s += parseFloat(tx.amount);
-                    else if (!isMinor && tx.category === majorCat) s += parseFloat(tx.amount);
+                if (tx.type === 'expense' && tx.date) {
+                    const match = isYearly ? tx.date.startsWith(cy) : tx.date.startsWith(cm);
+                    if (match) {
+                        if (isMinor && tx.category === majorCat && tx.minorCategory === minorCat) s += parseFloat(tx.amount);
+                        else if (!isMinor && tx.category === majorCat) s += parseFloat(tx.amount);
+                    }
                 }
             });
             spent.push(s);

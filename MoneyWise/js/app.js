@@ -80,6 +80,8 @@ const DEFAULT_PM = ['Cash', 'UPI', 'Debit Card', 'Amazon Pay', 'Credit Card'];
 
 const App = {
     editingTransId: null,
+    editingItemId: null,
+    editingCollection: null,
     data: null, currentUser: null, currencySymbol: '₹', budgetView: 'monthly',
 
     async init() {
@@ -580,7 +582,7 @@ const App = {
             const type = document.getElementById('asset-type').value;
             
             const newAsset = {
-                id: Date.now().toString(), 
+                id: (this.editingCollection === 'assets' && this.editingItemId) ? this.editingItemId : Date.now().toString(), 
                 type: type,
                 name: document.getElementById('asset-name').value, 
                 owner: document.getElementById('asset-owner').value,
@@ -595,32 +597,72 @@ const App = {
                 newAsset.maturityValue = parseFloat(document.getElementById('asset-maturity-value').value || 0);
             }
 
-            this.data.assets.push(newAsset);
+            if (this.editingCollection === 'assets' && this.editingItemId) {
+                const idx = this.data.assets.findIndex(a => a.id === this.editingItemId);
+                if(idx !== -1) this.data.assets[idx] = newAsset;
+            } else {
+                this.data.assets.push(newAsset);
+            }
+            this.editingItemId = null; this.editingCollection = null;
+            const btn = document.querySelector('#asset-form button[type="submit"]');
+            if(btn) btn.innerText = 'Save Investment';
+            
             this.closeModal('modal-asset'); e.target.reset();
             this.toggleAssetFields();
-            toast('Investment added!');
+            toast('Investment saved!');
             this.saveAndSync();
         });
 
         document.getElementById('chitti-form').addEventListener('submit', (e) => {
             e.preventDefault();
             if(!this.data.chittis) this.data.chittis = [];
-            this.data.chittis.push({
-                id: Date.now().toString(), name: document.getElementById('chitti-name').value,
-                sala: parseFloat(document.getElementById('chitti-sala').value), months: parseInt(document.getElementById('chitti-months').value),
-                owner: document.getElementById('chitti-owner').value, status: document.getElementById('chitti-status').value,
+            const newChitti = {
+                id: (this.editingCollection === 'chittis' && this.editingItemId) ? this.editingItemId : Date.now().toString(), 
+                name: document.getElementById('chitti-name').value,
+                sala: parseFloat(document.getElementById('chitti-sala').value), 
+                months: parseInt(document.getElementById('chitti-months').value),
+                owner: document.getElementById('chitti-owner').value, 
+                status: document.getElementById('chitti-status').value,
                 paidSoFar: 0, installmentsPaid: 0
-            });
-            this.closeModal('modal-chitti'); e.target.reset(); toast('Chitti added!'); this.saveAndSync();
+            };
+            
+            if (this.editingCollection === 'chittis' && this.editingItemId) {
+                const idx = this.data.chittis.findIndex(c => c.id === this.editingItemId);
+                if(idx !== -1) {
+                    newChitti.paidSoFar = this.data.chittis[idx].paidSoFar;
+                    newChitti.installmentsPaid = this.data.chittis[idx].installmentsPaid;
+                    this.data.chittis[idx] = newChitti;
+                }
+            } else {
+                this.data.chittis.push(newChitti);
+            }
+            this.editingItemId = null; this.editingCollection = null;
+            const btn = document.querySelector('#chitti-form button[type="submit"]');
+            if(btn) btn.innerText = 'Save Chitti';
+            
+            this.closeModal('modal-chitti'); e.target.reset(); toast('Chitti saved!'); this.saveAndSync();
         });
 
         document.getElementById('bank-form').addEventListener('submit', (e) => {
             e.preventDefault();
             if(!this.data.banks) this.data.banks = [];
-            this.data.banks.push({
-                id: Date.now().toString(), name: document.getElementById('bank-name').value,
-                owner: document.getElementById('bank-owner').value, balance: parseFloat(document.getElementById('bank-balance').value)
-            });
+            const newBank = {
+                id: (this.editingCollection === 'banks' && this.editingItemId) ? this.editingItemId : Date.now().toString(), 
+                name: document.getElementById('bank-name').value,
+                owner: document.getElementById('bank-owner').value, 
+                balance: parseFloat(document.getElementById('bank-balance').value)
+            };
+            
+            if (this.editingCollection === 'banks' && this.editingItemId) {
+                const idx = this.data.banks.findIndex(b => b.id === this.editingItemId);
+                if(idx !== -1) this.data.banks[idx] = newBank;
+            } else {
+                this.data.banks.push(newBank);
+            }
+            this.editingItemId = null; this.editingCollection = null;
+            const btn = document.querySelector('#bank-form button[type="submit"]');
+            if(btn) btn.innerText = 'Save Bank';
+            
             this.closeModal('modal-bank'); e.target.reset(); toast('Bank account saved!'); this.saveAndSync();
         });
 
@@ -631,9 +673,11 @@ const App = {
             const total = parseFloat(document.getElementById('loan-amount').value);
             const remaining = parseFloat(document.getElementById('loan-balance').value);
 
-            this.data.liabilities.push({
-                id: Date.now().toString(), type: document.getElementById('loan-type').value,
-                name: document.getElementById('loan-name').value, owner: document.getElementById('loan-owner').value,
+            const newLoan = {
+                id: (this.editingCollection === 'liabilities' && this.editingItemId) ? this.editingItemId : Date.now().toString(), 
+                type: document.getElementById('loan-type').value,
+                name: document.getElementById('loan-name').value, 
+                owner: document.getElementById('loan-owner').value,
                 totalAmount: total, 
                 remainingBalance: remaining,
                 paidAmount: total - remaining,
@@ -641,18 +685,34 @@ const App = {
                 rate: parseFloat(document.getElementById('loan-rate').value),
                 startDate: document.getElementById('loan-start-date').value || '',
                 tenure: parseInt(document.getElementById('loan-tenure').value || 0)
-            });
-            this.closeModal('modal-loan'); e.target.reset(); toast('Loan added!'); this.saveAndSync();
+            };
+            
+            if (this.editingCollection === 'liabilities' && this.editingItemId) {
+                const idx = this.data.liabilities.findIndex(l => l.id === this.editingItemId);
+                if(idx !== -1) this.data.liabilities[idx] = newLoan;
+            } else {
+                this.data.liabilities.push(newLoan);
+            }
+            this.editingItemId = null; this.editingCollection = null;
+            const btn = document.querySelector('#loan-form button[type="submit"]');
+            if(btn) btn.innerText = 'Save Liability';
+            
+            this.closeModal('modal-loan'); e.target.reset(); toast('Loan saved!'); this.saveAndSync();
         });
 
         document.getElementById('budget-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            if(!this.data.budgets) this.data.budgets = {};
+            const monthSel = document.getElementById('budget-month-selector');
+            const month = monthSel ? monthSel.value : new Date().toISOString().slice(0, 7);
+            
+            if(!this.data.monthlyBudgets) this.data.monthlyBudgets = {};
+            if(!this.data.monthlyBudgets[month]) this.data.monthlyBudgets[month] = { expectedIncome: 0, allocations: {} };
+            
             const major = document.getElementById('budget-major').value;
             const minor = document.getElementById('budget-minor').value;
             const key = minor === 'All' ? major : `${major} > ${minor}`;
             
-            this.data.budgets[key] = parseFloat(document.getElementById('budget-amount').value);
+            this.data.monthlyBudgets[month].allocations[key] = parseFloat(document.getElementById('budget-amount').value);
             this.closeModal('modal-budget'); e.target.reset(); toast('Budget saved!'); this.saveAndSync();
         });
 
@@ -768,7 +828,56 @@ const App = {
         this.budgetView = view;
         document.getElementById('budget-tab-monthly').classList.toggle('active', view === 'monthly');
         document.getElementById('budget-tab-yearly').classList.toggle('active', view === 'yearly');
+        
+        const mc = document.getElementById('budget-month-controls');
+        if (mc) mc.style.display = view === 'monthly' ? 'flex' : 'none';
+        
+        const ic = document.getElementById('budget-income-card');
+        if (ic) ic.style.display = view === 'monthly' ? 'block' : 'none';
+        
         this.renderBudgets();
+    },
+
+    saveBudgetIncome() {
+        const monthSel = document.getElementById('budget-month-selector');
+        if (!monthSel || !monthSel.value) return;
+        const month = monthSel.value;
+        const val = parseFloat(document.getElementById('budget-expected-income').value || 0);
+        
+        if(!this.data.monthlyBudgets) this.data.monthlyBudgets = {};
+        if(!this.data.monthlyBudgets[month]) {
+            // Check if we can migrate old
+            let oldAllocs = {};
+            if(this.data.budgets && Object.keys(this.data.budgets).length > 0) oldAllocs = JSON.parse(JSON.stringify(this.data.budgets));
+            this.data.monthlyBudgets[month] = { expectedIncome: 0, allocations: oldAllocs };
+        }
+        
+        this.data.monthlyBudgets[month].expectedIncome = val;
+        this.saveAndSync();
+        toast('Expected Income saved!');
+    },
+
+    async copyPreviousMonthBudget() {
+        const monthSel = document.getElementById('budget-month-selector');
+        if (!monthSel || !monthSel.value) return;
+        const currentMonth = monthSel.value;
+        
+        const ok = await mConfirm(`Copy budget from the previous month to ${currentMonth}? This will overwrite current allocations.`, 'Copy Budget');
+        if (!ok) return;
+
+        // calculate previous month
+        const [y, m] = currentMonth.split('-');
+        let prevM = parseInt(m) - 1;
+        let prevY = parseInt(y);
+        if (prevM === 0) { prevM = 12; prevY -= 1; }
+        const prevMonthStr = `${prevY}-${String(prevM).padStart(2,'0')}`;
+        
+        if (!this.data.monthlyBudgets) this.data.monthlyBudgets = {};
+        const prevBudget = this.data.monthlyBudgets[prevMonthStr] || { expectedIncome: 0, allocations: (this.data.budgets || {}) };
+        
+        this.data.monthlyBudgets[currentMonth] = JSON.parse(JSON.stringify(prevBudget));
+        toast(`Budget copied to ${currentMonth}!`);
+        this.saveAndSync();
     },
 
     exportCSV() {
@@ -954,7 +1063,10 @@ const App = {
             div.innerHTML = `<div class="list-icon text-${color}"><i class="fa-solid ${icon}"></i></div>
                 <div class="list-details"><div class="list-title">${title} <span class="badge badge-outline">${badge}</span></div><div class="list-subtitle">${sub1}</div><div class="list-subtitle" style="font-size:0.75rem">${sub2}</div></div>
                 <div style="text-align:right"><div class="list-amount text-${color}">${val1}</div><div style="font-size:0.8rem; color:var(--text-secondary)">${val2}</div>
-                <button class="btn-icon-small" onclick="App.deleteItem('${collection}', '${delId}')" style="margin-top:5px"><i class="fa-solid fa-trash"></i></button></div>`;
+                <div style="margin-top:5px;">
+                <button class="btn-icon-small" onclick="App.editPortfolioItem('${collection}', '${delId}')" title="Edit"><i class="fa-solid fa-pencil"></i></button>
+                <button class="btn-icon-small" onclick="App.deleteItem('${collection}', '${delId}')"><i class="fa-solid fa-trash"></i></button>
+                </div></div>`;
             return div;
         };
 
@@ -989,18 +1101,62 @@ const App = {
 
     renderBudgets() {
         const bl = document.getElementById('budget-list'); bl.innerHTML = '';
-        const budgets = this.data.budgets || {};
-        const now = new Date();
-        const cm = now.toISOString().slice(0, 7);
-        const cy = now.getFullYear().toString();
-        const isYearly = this.budgetView === 'yearly';
-        const multiplier = isYearly ? 12 : 1;
-        const label = isYearly ? 'Yearly' : 'Monthly';
         
-        let totalAllocated = 0; let totalSpent = 0;
+        const monthSel = document.getElementById('budget-month-selector');
+        if (monthSel && !monthSel.value) {
+            monthSel.value = new Date().toISOString().slice(0, 7);
+        }
+        const currentMonthStr = monthSel ? monthSel.value : new Date().toISOString().slice(0, 7);
+        
+        // Ensure data structures
+        if(!this.data.monthlyBudgets) this.data.monthlyBudgets = {};
+        let currentBudget = this.data.monthlyBudgets[currentMonthStr];
+        
+        // Auto-migrate old flat budgets if monthly doesn't exist for this month yet
+        if (!currentBudget) {
+            let oldAllocs = {};
+            if(this.data.budgets && Object.keys(this.data.budgets).length > 0) {
+                oldAllocs = JSON.parse(JSON.stringify(this.data.budgets));
+            }
+            currentBudget = { expectedIncome: 0, allocations: oldAllocs };
+            this.data.monthlyBudgets[currentMonthStr] = currentBudget;
+        }
+        
+        const incInput = document.getElementById('budget-expected-income');
+        if (incInput) incInput.value = currentBudget.expectedIncome || '';
 
-        Object.keys(budgets).forEach(key => {
-            const limit = budgets[key] * multiplier; totalAllocated += limit;
+        const cy = currentMonthStr.substring(0, 4);
+        const isYearly = this.budgetView === 'yearly';
+        
+        // For yearly view, we aggregate all monthlyBudgets that start with cy
+        let aggregatedAllocations = {};
+        let totalAllocated = 0; let totalSpent = 0;
+        let expectedIncomeTotal = 0;
+
+        if (isYearly) {
+            // Aggregate all 12 months for the selected year
+            for(let m=1; m<=12; m++) {
+                const ms = `${cy}-${String(m).padStart(2,'0')}`;
+                const b = this.data.monthlyBudgets[ms];
+                if (b) {
+                    expectedIncomeTotal += (b.expectedIncome || 0);
+                    for (let key in b.allocations) {
+                        aggregatedAllocations[key] = (aggregatedAllocations[key] || 0) + b.allocations[key];
+                    }
+                } else if (this.data.budgets) {
+                    // Fallback to legacy
+                    for (let key in this.data.budgets) {
+                        aggregatedAllocations[key] = (aggregatedAllocations[key] || 0) + this.data.budgets[key];
+                    }
+                }
+            }
+        } else {
+            aggregatedAllocations = currentBudget.allocations || {};
+            expectedIncomeTotal = currentBudget.expectedIncome || 0;
+        }
+
+        Object.keys(aggregatedAllocations).forEach(key => {
+            const limit = aggregatedAllocations[key]; totalAllocated += limit;
             let spent = 0;
             const isMinor = key.includes(' > ');
             const majorCat = isMinor ? key.split(' > ')[0] : key;
@@ -1008,7 +1164,7 @@ const App = {
 
             (this.data.transactions || []).forEach(tx => {
                 if (tx.type === 'expense' && tx.date) {
-                    const match = isYearly ? tx.date.startsWith(cy) : tx.date.startsWith(cm);
+                    const match = isYearly ? tx.date.startsWith(cy) : tx.date.startsWith(currentMonthStr);
                     if (!match) return;
                     if (isMinor && tx.category === majorCat && tx.minorCategory === minorCat) spent += parseFloat(tx.amount);
                     else if (!isMinor && tx.category === majorCat) spent += parseFloat(tx.amount);
@@ -1029,12 +1185,18 @@ const App = {
 
         document.getElementById('budget-total-allocated').innerText = this.fmtMoney(totalAllocated);
         document.getElementById('budget-total-spent').innerText = this.fmtMoney(totalSpent);
-        const rem = totalAllocated - totalSpent;
+        const rem = isYearly ? (expectedIncomeTotal || totalAllocated) - totalSpent : (currentBudget.expectedIncome || totalAllocated) - totalSpent;
         const elRem = document.getElementById('budget-total-remaining');
         elRem.innerText = this.fmtMoney(rem);
         elRem.className = rem < 0 ? 'stat-value text-danger' : 'stat-value text-success';
+        
+        // If they defined income, use it for "Remaining Safe to Spend", else fallback to allocated-spent
+        const labelSafe = document.querySelector('#budget-total-remaining').previousElementSibling;
+        if (labelSafe) {
+            labelSafe.innerText = (currentBudget.expectedIncome > 0 || expectedIncomeTotal > 0) ? 'Remaining (Income - Spent)' : 'Remaining Safe to Spend (Allocated - Spent)';
+        }
 
-        if(Object.keys(budgets).length === 0) bl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-bullseye"></i><p>No budgets set. Tap + to create one.</p></div>`;
+        if(Object.keys(aggregatedAllocations).length === 0) bl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-bullseye"></i><p>No budgets set for this period. Tap + to create one.</p></div>`;
         if (document.getElementById('view-budget').classList.contains('active')) Analytics.renderCharts(this.data);
     },
 
@@ -1236,6 +1398,60 @@ const App = {
         
         const btn = document.querySelector('#entry-form button[type="submit"]');
         if(btn) btn.innerText = 'Update Record';
+    },
+
+    editPortfolioItem(collection, id) {
+        const item = (this.data[collection] || []).find(i => i.id === id);
+        if(!item) return;
+        this.editingCollection = collection;
+        this.editingItemId = id;
+
+        if (collection === 'banks') {
+            document.getElementById('bank-name').value = item.name;
+            document.getElementById('bank-owner').value = item.owner;
+            document.getElementById('bank-balance').value = item.balance;
+            const btn = document.querySelector('#bank-form button[type="submit"]');
+            if(btn) btn.innerText = 'Update Bank';
+            this.openModal('modal-bank');
+        } else if (collection === 'assets') {
+            document.getElementById('asset-type').value = item.type;
+            document.getElementById('asset-name').value = item.name;
+            document.getElementById('asset-owner').value = item.owner;
+            document.getElementById('asset-invested').value = item.invested;
+            document.getElementById('asset-current').value = item.currentValue;
+            if (['Fixed Deposit', 'Bond', 'PF', 'NPS', 'PPF', 'Gold', 'Real Estate'].includes(item.type)) {
+                document.getElementById('asset-date').value = item.investedDate || '';
+                document.getElementById('asset-rate').value = item.interestRate || '';
+                document.getElementById('asset-months').value = item.maturityMonths || '';
+                document.getElementById('asset-maturity-value').value = item.maturityValue || '';
+            }
+            this.toggleAssetFields();
+            const btn = document.querySelector('#asset-form button[type="submit"]');
+            if(btn) btn.innerText = 'Update Investment';
+            this.openModal('modal-asset');
+        } else if (collection === 'chittis') {
+            document.getElementById('chitti-name').value = item.name;
+            document.getElementById('chitti-sala').value = item.sala;
+            document.getElementById('chitti-months').value = item.months;
+            document.getElementById('chitti-owner').value = item.owner;
+            document.getElementById('chitti-status').value = item.status;
+            const btn = document.querySelector('#chitti-form button[type="submit"]');
+            if(btn) btn.innerText = 'Update Chitti';
+            this.openModal('modal-chitti');
+        } else if (collection === 'liabilities') {
+            document.getElementById('loan-type').value = item.type;
+            document.getElementById('loan-name').value = item.name;
+            document.getElementById('loan-owner').value = item.owner;
+            document.getElementById('loan-amount').value = item.totalAmount;
+            document.getElementById('loan-balance').value = item.remainingBalance;
+            document.getElementById('loan-emi').value = item.emi;
+            document.getElementById('loan-rate').value = item.rate || '';
+            document.getElementById('loan-start-date').value = item.startDate || '';
+            document.getElementById('loan-tenure').value = item.tenure || '';
+            const btn = document.querySelector('#loan-form button[type="submit"]');
+            if(btn) btn.innerText = 'Update Liability';
+            this.openModal('modal-loan');
+        }
     },
 
     /** Export entire database as a downloadable JSON file */
