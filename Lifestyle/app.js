@@ -9,13 +9,20 @@ function HABITS() { return getActiveHabitIds(); }
 function HNAMES() { const m={}; getActiveHabits().forEach(h=>{m[h.id]=h.name;}); return m; }
 
 const DAILY_QUOTES = [
-  {en: "Believe you can and you're halfway there.", ml: "നിങ്ങൾക്ക് കഴിയുമെന്ന് വിശ്വസിക്കുക, നിങ്ങൾ പകുതി വഴി പിന്നിട്ടു."},
-  {en: "The only bad workout is the one that didn't happen.", ml: "നടക്കാത്ത വ്യായാമം മാത്രമാണ് മോശമായത്."},
-  {en: "Success is the sum of small efforts, repeated day in and day out.", ml: "വിജയം എന്നത് അനുദിനം ആവർത്തിക്കുന്ന ചെറിയ ശ്രമങ്ങളുടെ ആകെത്തുകയാണ്."},
-  {en: "Your future is created by what you do today, not tomorrow.", ml: "നിങ്ങളുടെ ഭാവി സൃഷ്ടിക്കപ്പെടുന്നത് നിങ്ങൾ ഇന്ന് ചെയ്യുന്നതിലൂടെയാണ്, നാളെയല്ല."},
-  {en: "Discipline is choosing between what you want now and what you want most.", ml: "ഇപ്പോൾ വേണ്ടതും ഏറ്റവും കൂടുതൽ വേണ്ടതും തമ്മിലുള്ള തിരഞ്ഞെടുപ്പാണ് അച്ചടക്കം."},
-  {en: "Don't stop when you're tired. Stop when you're done.", ml: "തളരുമ്പോൾ നിർത്തരുത്. പൂർത്തിയാകുമ്പോൾ നിർത്തുക."},
-  {en: "Small daily improvements are the key to staggering long-term results.", ml: "ചെറിയ ദൈനംദിന മെച്ചപ്പെടുത്തലുകളാണ് മികച്ച ദീർഘകാല ഫലങ്ങളുടെ താക്കോൽ."}
+  {en: "True transformation requires consistent dedication. Every small choice you make today builds the foundation of the life you want tomorrow. Don't look for immediate results; trust the process, stay disciplined, and eventually you will become unstoppable.", 
+   ml: "നിങ്ങളുടെ ഉള്ളിലെ തീ കെടാതെ സൂക്ഷിക്കുക. ഓരോ ദിവസവും ഒരു പുതിയ തുടക്കമാണ്. മാറ്റങ്ങൾ പെട്ടെന്ന് സംഭവിക്കില്ലെങ്കിലും, നിങ്ങളുടെ നിരന്തരമായ പ്രയത്നം ഒരു നാൾ വലിയ വിജയമായി മാറും. ലക്ഷ്യത്തിലേക്കുള്ള യാത്രയിൽ തളരാതിരിക്കുക."},
+  
+  {en: "Your mind is a powerful thing. When you fill it with positive thoughts and focus entirely on your goals, your life will start to change. Push through the discomfort, because the pain of discipline is far less than the pain of regret.", 
+   ml: "സ്വപ്നങ്ങൾ യാഥാർത്ഥ്യമാകണമെങ്കിൽ ഉറച്ച തീരുമാനങ്ങൾ എടുക്കണം. ഇന്നത്തെ നിങ്ങളുടെ ചെറിയ ത്യാഗങ്ങൾ നാളത്തെ നിങ്ങളുടെ സന്തോഷത്തിന് കാരണമാകും. മറ്റുള്ളവർ എന്ത് വിചാരിക്കും എന്ന് ചിന്തിക്കാതെ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് മുന്നേറുക."},
+  
+  {en: "There will be days when you feel like giving up, when the progress seems invisible. Remember why you started in the first place. You are stronger than your excuses. Show up for yourself, even when it's hard.", 
+   ml: "ശരീരത്തിനും മനസ്സിനും ഒരുപോലെ കരുത്ത് നൽകേണ്ടത് അത്യാവശ്യമാണ്. ആരോഗ്യകരമായ ശീലങ്ങൾ വളർത്തിയെടുക്കുന്നത് ഒരു ദിവസത്തെ കാര്യമല്ല, അത് ഒരു ജീവിതചര്യയാണ്. ഓരോ ചുവടും നിങ്ങളെ വിജയത്തിലേക്ക് അടുപ്പിക്കുന്നു."},
+  
+  {en: "Success is not a big step in the future, it is a small step taken right now. By mastering your morning routines, tracking your progress, and taking control of your daily habits, you master your destiny.", 
+   ml: "പരാജയങ്ങളെ ഭയപ്പെടാതിരിക്കുക, അവ വിജയത്തിലേക്കുള്ള പാഠങ്ങളാണ്. ഒരു തവണ വീണാൽ അടുത്ത തവണ കൂടുതൽ കരുത്തോടെ എഴുന്നേൽക്കുക. നിങ്ങളുടെ ആഗ്രഹങ്ങൾക്കുവേണ്ടി പോരാടാൻ നിങ്ങൾ മാത്രമേയുള്ളൂ എന്നോർക്കുക."},
+  
+  {en: "Motivation gets you going, but discipline keeps you growing. Set your standards high, embrace the grind, and refuse to settle for mediocrity. The best version of yourself is waiting on the other side of consistency.", 
+   ml: "സ്വയം വിശ്വസിക്കുക, അതാണ് വിജയത്തിന്റെ ആദ്യപടി. നിങ്ങളുടെ കഴിവുകളിൽ സംശയം തോന്നുന്ന നിമിഷങ്ങളിൽ, നിങ്ങൾ ഇതുവരെ താണ്ടിയ ദൂരത്തെക്കുറിച്ച് ഓർക്കുക. മുന്നോട്ടുള്ള വഴിയിൽ ഒരുപാട് അത്ഭുതങ്ങൾ കാത്തിരിപ്പുണ്ട്."}
 ];
 
 // ── Page Navigation ──
@@ -1218,6 +1225,160 @@ function deleteTimetableSlot(idx) {
   setTimetable(tt);
   renderTimetable();
   toast('🗑️ Block removed');
+}
+
+// ── Health Tools Logic ──
+function renderToolsPage() {
+  const el = document.getElementById('toolsContent');
+  if(!el) return;
+  const s = getS();
+  
+  // Create UI
+  let html = `
+  <div class="cd">
+    <div class="ct">🧮 BMI & Calories Calculator</div>
+    <p style="font-size:13px;color:var(--t3);margin-bottom:14px">Calculate your body metrics and daily energy expenditure to set accurate goals.</p>
+    
+    <div class="sgrid" style="margin-bottom:14px">
+      <div class="fld"><label>Weight (kg)</label><input type="number" id="htW" class="hin" value="${s.weight||70}"></div>
+      <div class="fld"><label>Height (cm)</label><input type="number" id="htH" class="hin" value="170"></div>
+    </div>
+    <div class="sgrid" style="margin-bottom:14px">
+      <div class="fld"><label>Age</label><input type="number" id="htA" class="hin" value="30"></div>
+      <div class="fld"><label>Gender</label><select id="htG" class="hin"><option value="m">Male</option><option value="f">Female</option></select></div>
+    </div>
+    <div class="fld" style="margin-bottom:16px">
+      <label>Activity Level</label>
+      <select id="htAct" class="hin">
+        <option value="1.2">Sedentary (Little to no exercise)</option>
+        <option value="1.375">Lightly Active (1-3 days/week)</option>
+        <option value="1.55" selected>Moderately Active (3-5 days/week)</option>
+        <option value="1.725">Very Active (6-7 days/week)</option>
+        <option value="1.9">Extra Active (Physical job/training)</option>
+      </select>
+    </div>
+    <div class="fld" style="margin-bottom:16px">
+      <label>Goal Type</label>
+      <select id="htGType" class="hin">
+        <option value="-500">Weight Loss (Lose ~0.5kg/week)</option>
+        <option value="0" selected>Maintenance (Keep current weight)</option>
+        <option value="500">Muscle Gain (Gain ~0.5kg/week)</option>
+      </select>
+    </div>
+    
+    <button class="btn btn-p btn-bl" onclick="calcHealth()">Calculate Metrics</button>
+  </div>
+  
+  <div class="cd" id="htResults" style="display:none">
+    <div class="ct">📊 Your Results</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
+      <span style="color:var(--t2)">BMI:</span> <strong id="htResBMI" style="color:var(--ac)">--</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
+      <span style="color:var(--t2)">BMR (Base Cal):</span> <strong id="htResBMR">--</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
+      <span style="color:var(--t2)">TDEE (Daily Burn):</span> <strong id="htResTDEE">--</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <span style="color:var(--t2);font-weight:600">Goal Calories:</span> <strong id="htResGoal" style="color:var(--ok);font-size:16px">-- kcal/day</strong>
+    </div>
+    
+    <div class="fld" style="margin-bottom:14px">
+      <label>Set Target Weight (kg)</label>
+      <input type="number" id="htTgtW" class="hin" value="${s.tgtW||''}" placeholder="e.g. 65">
+    </div>
+    <p style="font-size:11px;color:var(--t3);margin-bottom:10px;text-align:center">This will sync your daily tracker and graphs with these new target goals.</p>
+    <button class="btn btn-ok btn-bl" onclick="saveHealthGoals()">Add to Goals & Sync</button>
+  </div>
+  `;
+  el.innerHTML = html;
+}
+
+function calcHealth() {
+  const w = parseFloat(document.getElementById('htW').value);
+  const h = parseFloat(document.getElementById('htH').value);
+  const a = parseInt(document.getElementById('htA').value);
+  const g = document.getElementById('htG').value;
+  const act = parseFloat(document.getElementById('htAct').value);
+  const gtype = parseInt(document.getElementById('htGType').value);
+  
+  if(!w || !h || !a) { toast('⚠️ Please fill out all fields'); return; }
+  
+  // BMI
+  const bmi = (w / ((h/100)*(h/100))).toFixed(1);
+  let bmiCat = '';
+  if(bmi < 18.5) bmiCat = '(Underweight)';
+  else if(bmi < 25) bmiCat = '(Normal)';
+  else if(bmi < 30) bmiCat = '(Overweight)';
+  else bmiCat = '(Obese)';
+  
+  // BMR (Mifflin-St Jeor)
+  let bmr = (10 * w) + (6.25 * h) - (5 * a);
+  if(g === 'm') bmr += 5;
+  else bmr -= 161;
+  
+  // TDEE
+  const tdee = Math.round(bmr * act);
+  
+  // Goal
+  const goalCal = tdee + gtype;
+  
+  document.getElementById('htResBMI').textContent = bmi + ' ' + bmiCat;
+  document.getElementById('htResBMR').textContent = Math.round(bmr) + ' kcal';
+  document.getElementById('htResTDEE').textContent = tdee + ' kcal';
+  document.getElementById('htResGoal').textContent = goalCal + ' kcal/day';
+  
+  // Cache for saving
+  window.lastCalcCal = goalCal;
+  window.lastCalcW = w;
+  
+  document.getElementById('htResults').style.display = 'block';
+  document.getElementById('htResults').scrollIntoView({behavior:'smooth'});
+}
+
+function saveHealthGoals() {
+  const tgtW = parseFloat(document.getElementById('htTgtW').value);
+  if(!tgtW) { toast('⚠️ Please enter a Target Weight'); return; }
+  
+  const s = getS();
+  s.weight = window.lastCalcW || s.weight;
+  s.tgtW = tgtW;
+  s.tgtCal = window.lastCalcCal || s.tgtCal;
+  setS(s);
+  
+  toast('✅ Goals synced to Tracker & Analytics!');
+  setTimeout(() => showPg('pgDash'), 1000);
+}
+
+// ── Analytics Page ──
+function refreshAna() {
+  const s = getS(), ad = allD();
+  
+  // Calorie chart
+  const cL=[], cC=[], cG=[];
+  Object.keys(ad).sort().forEach(d=>{
+    const dd = ad[d];
+    if(dd.habits && dd.calories) {
+      cL.push('D'+(diffD(s.startDate,d)+1));
+      cC.push(dd.calories);
+      if(s.tgtCal) cG.push(s.tgtCal);
+    }
+  });
+  
+  if(CI.cal) CI.cal.destroy();
+  
+  const calEl = document.getElementById('cCalorie');
+  if (calEl) {
+    const calDatasets = [{label:'Calories Logged',data:cC,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.1)',fill:true,tension:.3}];
+    if(s.tgtCal && cG.length > 0) {
+      calDatasets.push({label:'Calorie Target',data:cG,borderColor:'#22c55e',borderDash:[5,5],borderWidth:2,pointRadius:0,fill:false});
+    }
+    
+    CI.cal = new Chart(calEl, {
+      type:'line', data:{ labels:cL, datasets:calDatasets}, options:cOpt('kcal')
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
