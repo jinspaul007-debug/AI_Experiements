@@ -27,7 +27,8 @@ const DEFAULT_HABITS = [
   {id:'sleep7hrs',name:'7+ Hours Sleep',emoji:'😴',group:'evening',hasInput:true,inputType:'number',field:'sleepHours',unit:'hrs',step:'0.5'},
   {id:'sleepQuality',name:'Sleep Quality',emoji:'🌙',group:'evening',hasInput:true,inputType:'select',field:'sleepQuality',options:['Poor','Fair','Good','Very Good','Excellent']},
   {id:'bedTime',name:'Bed Time',emoji:'🛏️',group:'evening',hasInput:true,inputType:'time',field:'bedTime'},
-  {id:'weightNight',name:'Night Weight',emoji:'⚖️',group:'evening',hasInput:true,inputType:'number',field:'weightNight',unit:'kg',step:'0.1'}
+  {id:'weightNight',name:'Night Weight',emoji:'⚖️',group:'evening',hasInput:true,inputType:'number',field:'weightNight',unit:'kg',step:'0.1'},
+  {id:'prayerTime',name:'Prayer Time',emoji:'🙏',group:'morning'}
 ];
 
 const HABIT_GROUPS = {
@@ -41,16 +42,16 @@ const HABIT_GROUPS = {
 
 const CHALLENGE_TYPES = {
   lifestyle:{name:'Lifestyle Transform',emoji:'🌟',desc:'Track all habits for complete life improvement',
-    habits:['wakeUp430','yoga','morningExercise','weightMorning','gym','noSugar','noJunk','balancedMeal','protein','water','study','reading','communication','qualityTime','sleep7hrs','weightNight']},
+    habits:['wakeUp430','prayerTime','yoga','morningExercise','weightMorning','gym','noSugar','noJunk','balancedMeal','protein','water','study','reading','communication','qualityTime','sleep7hrs','weightNight']},
   weight_loss:{name:'Weight Loss',emoji:'⚖️',desc:'Focus on weight, calories, exercise and nutrition',
-    habits:['weightMorning','morningExercise','gym','steps','noSugar','noJunk','balancedMeal','protein','water','calorieTrack','weightNight']},
+    habits:['prayerTime','weightMorning','morningExercise','gym','steps','noSugar','noJunk','balancedMeal','protein','water','calorieTrack','weightNight']},
   sleep:{name:'Sleep Improvement',emoji:'😴',desc:'Improve sleep quality, duration and schedule',
-    habits:['wakeUp430','yoga','morningExercise','water','sleep7hrs','sleepQuality','bedTime']},
+    habits:['wakeUp430','prayerTime','weightMorning','yoga','morningExercise','water','sleep7hrs','sleepQuality','bedTime','weightNight']},
   activity:{name:'Activity Challenge',emoji:'🏃',desc:'Boost physical activity and fitness levels',
-    habits:['morningExercise','yoga','gym','steps','water','protein','sleep7hrs']},
+    habits:['prayerTime','weightMorning','morningExercise','yoga','gym','steps','water','protein','sleep7hrs','weightNight']},
   calorie:{name:'Calorie Control',emoji:'🍎',desc:'Manage nutrition, calories and meal quality',
-    habits:['balancedMeal','noSugar','noJunk','protein','water','calorieTrack','weightMorning','weightNight']},
-  custom:{name:'Custom Challenge',emoji:'✏️',desc:'Choose your own habits and goals',habits:[]}
+    habits:['prayerTime','weightMorning','balancedMeal','noSugar','noJunk','protein','water','calorieTrack','weightNight']},
+  custom:{name:'Custom Challenge',emoji:'✏️',desc:'Choose your own habits and goals',habits:['prayerTime','weightMorning','weightNight']}
 };
 
 const MILESTONES = [
@@ -261,6 +262,10 @@ function importFullBackup(dump) {
 // ── Shared Data (for comparison) ──
 function getSharedData() { return JSON.parse(localStorage.getItem('lc_shared')||'[]'); }
 function setSharedData(d) { localStorage.setItem('lc_shared',JSON.stringify(d)); triggerSync(); }
+
+// ── Timetable ──
+function getTimetable() { if(!activeUser) return []; return JSON.parse(localStorage.getItem('lc_tt_'+activeUser.id)||'[]'); }
+function setTimetable(tt) { if(activeUser) { localStorage.setItem('lc_tt_'+activeUser.id,JSON.stringify(tt)); triggerSync(); } }
 
 function exportForSharing() {
   if(!activeUser) return null;

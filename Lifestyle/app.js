@@ -8,6 +8,16 @@
 function HABITS() { return getActiveHabitIds(); }
 function HNAMES() { const m={}; getActiveHabits().forEach(h=>{m[h.id]=h.name;}); return m; }
 
+const DAILY_QUOTES = [
+  {en: "Believe you can and you're halfway there.", ml: "നിങ്ങൾക്ക് കഴിയുമെന്ന് വിശ്വസിക്കുക, നിങ്ങൾ പകുതി വഴി പിന്നിട്ടു."},
+  {en: "The only bad workout is the one that didn't happen.", ml: "നടക്കാത്ത വ്യായാമം മാത്രമാണ് മോശമായത്."},
+  {en: "Success is the sum of small efforts, repeated day in and day out.", ml: "വിജയം എന്നത് അനുദിനം ആവർത്തിക്കുന്ന ചെറിയ ശ്രമങ്ങളുടെ ആകെത്തുകയാണ്."},
+  {en: "Your future is created by what you do today, not tomorrow.", ml: "നിങ്ങളുടെ ഭാവി സൃഷ്ടിക്കപ്പെടുന്നത് നിങ്ങൾ ഇന്ന് ചെയ്യുന്നതിലൂടെയാണ്, നാളെയല്ല."},
+  {en: "Discipline is choosing between what you want now and what you want most.", ml: "ഇപ്പോൾ വേണ്ടതും ഏറ്റവും കൂടുതൽ വേണ്ടതും തമ്മിലുള്ള തിരഞ്ഞെടുപ്പാണ് അച്ചടക്കം."},
+  {en: "Don't stop when you're tired. Stop when you're done.", ml: "തളരുമ്പോൾ നിർത്തരുത്. പൂർത്തിയാകുമ്പോൾ നിർത്തുക."},
+  {en: "Small daily improvements are the key to staggering long-term results.", ml: "ചെറിയ ദൈനംദിന മെച്ചപ്പെടുത്തലുകളാണ് മികച്ച ദീർഘകാല ഫലങ്ങളുടെ താക്കോൽ."}
+];
+
 // ── Page Navigation ──
 function showPg(id,btn) {
   if(!activeUser && id!=='pgProfile') { showProfileSetup(); return; }
@@ -30,6 +40,7 @@ function showPg(id,btn) {
   if(id==='pgProfile') renderProfilePage();
   if(id==='pgGoals') renderGoalsPage();
   if(id==='pgTools') renderToolsPage();
+  if(id==='pgTimetable') renderTimetable();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -258,6 +269,27 @@ function refreshDash() {
   const s=getS(), ad=allD(), t=todayStr();
   const dn=Math.max(1,diffD(s.startDate,t)+1), cap=Math.min(dn,s.duration);
 
+  // Live Clock & Date
+  if(CI.clockInt) clearInterval(CI.clockInt);
+  const updateClock = () => {
+    const now = new Date();
+    const clkEl = document.getElementById('liveClock');
+    const dtEl = document.getElementById('liveDate');
+    if(clkEl) clkEl.textContent = now.toLocaleTimeString('en-US', {hour12:false});
+    if(dtEl) dtEl.textContent = now.toLocaleDateString('en-GB', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  };
+  CI.clockInt = setInterval(updateClock, 1000);
+  updateClock();
+
+  // Daily Quote
+  const now = new Date();
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const q = DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+  const qEn = document.getElementById('quoteEn');
+  const qMl = document.getElementById('quoteMl');
+  if(qEn) qEn.textContent = '"' + q.en + '"';
+  if(qMl) qMl.textContent = '"' + q.ml + '"';
+
   const chEmoji = activeChallenge ? (CHALLENGE_TYPES[activeChallenge.type]||{emoji:'🔥'}).emoji : '🔥';
   document.getElementById('bdgT').textContent=chEmoji+' Day '+cap+' of '+s.duration;
 
@@ -303,20 +335,42 @@ function refreshDash() {
   }
 
   // Weight chart
-  const wL=[], wM=[], wN=[];
+  const wL=[], wM=[], wN=[], wG=[];
+  let lastWt = null;
   Object.keys(ad).sort().forEach(d=>{
     const dd=ad[d];
     if(dd.weightMorning||dd.weightNight){
       wL.push('D'+(diffD(s.startDate,d)+1));
       wM.push(dd.weightMorning||null); wN.push(dd.weightNight||null);
+      if(s.tgtW) wG.push(s.tgtW);
+      lastWt = dd.weightMorning || dd.weightNight || lastWt;
     }
   });
+
+  const goalTxtEl = document.getElementById('goalProgressTxt');
+  if (goalTxtEl) {
+    if (s.tgtW && lastWt) {
+       const diff = Math.abs(lastWt - s.tgtW).toFixed(1);
+       const txt = lastWt > s.tgtW ? `You are ${diff} kg away from your goal!` : `You have reached your goal! 🎉`;
+       goalTxtEl.textContent = txt;
+    } else if (s.tgtW) {
+       goalTxtEl.textContent = `Target Goal: ${s.tgtW} kg`;
+    } else {
+       goalTxtEl.textContent = '';
+    }
+  }
+
   if(CI.wt) CI.wt.destroy();
+  const wtDatasets = [
+    {label:'Morning',data:wM,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,spanGaps:true},
+    {label:'Night',data:wN,borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.1)',fill:true,tension:.3,spanGaps:true}
+  ];
+  if(s.tgtW && wG.length > 0) {
+    wtDatasets.push({label:'Goal',data:wG,borderColor:'#22c55e',borderDash:[5,5],borderWidth:2,pointRadius:0,fill:false});
+  }
+  
   CI.wt=new Chart(document.getElementById('cWt'),{
-    type:'line', data:{ labels:wL, datasets:[
-      {label:'Morning',data:wM,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,spanGaps:true},
-      {label:'Night',data:wN,borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.1)',fill:true,tension:.3,spanGaps:true}
-    ]}, options:cOpt('kg')
+    type:'line', data:{ labels:wL, datasets:wtDatasets}, options:cOpt('kg')
   });
 
   // Habit bar chart
@@ -1111,6 +1165,59 @@ function proceedInit() {
   }
 
   showPg('pgDash');
+}
+
+// ── Timetable Logic ──
+function renderTimetable() {
+  const el = document.getElementById('timetableList');
+  if(!el) return;
+  const tt = getTimetable();
+  if(!tt.length) {
+    el.innerHTML = '<div style="color:var(--t3);font-size:13px;font-style:italic">No schedule added yet.</div>';
+    return;
+  }
+  // Sort by time
+  tt.sort((a,b) => a.time.localeCompare(b.time));
+  
+  let html = '';
+  tt.forEach((slot, idx) => {
+    // format time 14:00 to 02:00 PM
+    let [h, m] = slot.time.split(':');
+    let hh = parseInt(h);
+    let ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12 || 12;
+    let tFmt = hh + ':' + m + ' ' + ampm;
+    
+    html += '<div style="display:flex;align-items:center;padding:10px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px">';
+    html += '<div style="background:rgba(59,130,246,.15);color:var(--ac);font-weight:700;padding:6px 10px;border-radius:6px;font-size:12px;margin-right:12px;font-family:monospace">' + tFmt + '</div>';
+    html += '<div style="flex:1;font-size:14px">' + slot.desc + '</div>';
+    html += '<button class="btn btn-no btn-s" style="padding:4px 8px" onclick="deleteTimetableSlot(' + idx + ')">✕</button>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function addTimetableSlot() {
+  const time = document.getElementById('ttTime').value;
+  const desc = document.getElementById('ttDesc').value.trim();
+  if(!time || !desc) { toast('⚠️ Enter both time and description'); return; }
+  
+  const tt = getTimetable();
+  tt.push({time, desc});
+  setTimetable(tt);
+  
+  document.getElementById('ttTime').value = '';
+  document.getElementById('ttDesc').value = '';
+  renderTimetable();
+  toast('✅ Schedule updated');
+}
+
+function deleteTimetableSlot(idx) {
+  const tt = getTimetable();
+  tt.splice(idx, 1);
+  setTimetable(tt);
+  renderTimetable();
+  toast('🗑️ Block removed');
 }
 
 document.addEventListener('DOMContentLoaded', init);

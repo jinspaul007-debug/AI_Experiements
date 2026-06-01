@@ -216,6 +216,15 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 
 <!-- PAGE: DASHBOARD -->
 <div class="pg active" id="pgDash">
+  <div class="cd" style="text-align:center;margin-bottom:14px">
+    <div id="liveClock" style="font-size:28px;font-weight:800;color:var(--ac);font-family:monospace;margin-bottom:2px">--:--:--</div>
+    <div id="liveDate" style="font-size:11px;color:var(--t2);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600">--</div>
+    <div style="font-style:italic">
+      <div id="quoteEn" style="font-size:14px;color:var(--t1);margin-bottom:4px">"Loading motivation..."</div>
+      <div id="quoteMl" style="font-size:12px;color:var(--t3)">"..."</div>
+    </div>
+  </div>
+
   <div class="prc"><div class="prg">
     <svg viewBox="0 0 180 180"><circle class="rbg" cx="90" cy="90" r="78"/><circle class="rfill" id="pRing" cx="90" cy="90" r="78" stroke-dasharray="490" stroke-dashoffset="490"/></svg>
     <div class="rtxt"><div class="rp" id="oPct">0%</div><div class="rl">Overall Progress</div></div>
@@ -230,7 +239,11 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 
   <div class="cd"><div class="ct">📅 Challenge Map</div><div class="strk" id="sMap"></div></div>
   <div id="dashGoals"></div>
-  <div class="cd"><div class="ct">⚖️ Weight Trend</div><div class="chc"><canvas id="cWt"></canvas></div></div>
+  <div class="cd">
+    <div class="ct">⚖️ Weight Trend</div>
+    <div id="goalProgressTxt" style="text-align:center;font-size:13px;font-weight:600;color:var(--ac);margin-bottom:6px"></div>
+    <div class="chc"><canvas id="cWt"></canvas></div>
+  </div>
   <div class="cd"><div class="ct">📊 Habit Completion Rate</div><div class="chc"><canvas id="cHab"></canvas></div></div>
   <div class="cd"><div class="ct">🏆 Milestones</div><div class="mtl" id="mTL"></div></div>
 </div>
@@ -346,11 +359,26 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
   <div id="toolsContent"></div>
 </div>
 
+<!-- PAGE: TIMETABLE -->
+<div class="pg" id="pgTimetable">
+  <div class="cd">
+    <div class="ct">📅 Daily Timetable</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Plan your daily routine. Add time blocks to schedule your perfect day.</p>
+    <div id="timetableList"></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <input type="time" class="hin" id="ttTime" style="width:105px">
+      <input type="text" class="hin wfull" id="ttDesc" placeholder="e.g. Morning Workout">
+      <button class="btn btn-p btn-s" onclick="addTimetableSlot()">+ Add</button>
+    </div>
+  </div>
+</div>
+
 <!-- PAGE: MORE (feature menu) -->
 <div class="pg" id="pgMore">
   <div class="cd"><div class="ct">⚡ More Features</div>
     <div class="fgrid">
       <div class="fcard" onclick="showPg('pgChallenge')"><div class="fi">🏆</div><div class="fl">Challenges</div><div class="fd">Start / switch challenge</div></div>
+      <div class="fcard" onclick="showPg('pgTimetable')"><div class="fi">📅</div><div class="fl">Timetable</div><div class="fd">Daily schedule</div></div>
       <div class="fcard" onclick="showPg('pgTools')"><div class="fi">🧮</div><div class="fl">Health Tools</div><div class="fd">BMI, calories, planner</div></div>
       <div class="fcard" onclick="showPg('pgCompare')"><div class="fi">🔀</div><div class="fl">Compare</div><div class="fd">vs other users</div></div>
       <div class="fcard" onclick="showPg('pgProfile')"><div class="fi">👤</div><div class="fl">Profiles</div><div class="fd">Switch / add user</div></div>
