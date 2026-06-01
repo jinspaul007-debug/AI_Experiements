@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><title>Generate Icons</title></head>
+<body style="background:#0f172a;display:flex;gap:20px;padding:40px;flex-wrap:wrap;">
+<canvas id="c192" width="192" height="192"></canvas>
+<canvas id="c512" width="512" height="512"></canvas>
+<script>
+function drawIcon(canvasId, size) {
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+  // Background
+  const g = ctx.createLinearGradient(0, 0, size, size);
+  g.addColorStop(0, '#3b82f6'); g.addColorStop(0.5, '#a855f7'); g.addColorStop(1, '#ec4899');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, size * 0.2);
+  ctx.fill();
+  // Text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + (size * 0.25) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('101', size/2, size * 0.45);
+  ctx.font = 'bold ' + (size * 0.1) + 'px -apple-system, sans-serif';
+  ctx.fillText('DAYS', size/2, size * 0.6);
+  ctx.font = (size * 0.15) + 'px sans-serif';
+  ctx.fillText('🔥', size/2, size * 0.8);
+  // Download link
+  const link = document.createElement('a');
+  link.download = canvasId === 'c192' ? 'icon-192.png' : 'icon-512.png';
+  link.href = c.toDataURL('image/png');
+  link.textContent = 'Download ' + link.download;
+  link.style.cssText = 'color:#fff;display:block;margin-top:8px;font-size:14px;';
+  c.parentNode.insertBefore(link, c.nextSibling);
+}
+drawIcon('c192', 192);
+drawIcon('c512', 512);
+</script>
+</body></html>

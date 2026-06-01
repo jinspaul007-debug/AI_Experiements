@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Lifestyle Challenge Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--inp:#0f172a;--t1:#f1f5f9;--t2:#94a3b8;--t3:#64748b;--ac:#3b82f6;--ac2:#2563eb;--ok:#22c55e;--wn:#f59e0b;--no:#ef4444;--pu:#a855f7;--pk:#ec4899;--cy:#06b6d4;--or:#f97316;--bd:#334155;--r:12px;--sh:0 4px 24px rgba(0,0,0,.3)}
+[data-theme=light]{--bg:#f8fafc;--bg2:#fff;--bg3:#f1f5f9;--inp:#f1f5f9;--t1:#0f172a;--t2:#475569;--t3:#94a3b8;--bd:#e2e8f0;--sh:0 4px 24px rgba(0,0,0,.08)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t1);line-height:1.6;min-height:100vh;padding-bottom:80px;font-size:15px}
+a{color:var(--ac);text-decoration:none}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+
+/* Bottom Nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bd);display:flex;z-index:100;padding:4px 0;padding-bottom:env(safe-area-inset-bottom,8px);backdrop-filter:blur(20px)}
+.bnav button{flex:1;background:none;border:none;color:var(--t3);padding:8px 4px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:500;transition:.2s}
+.bnav button.active{color:var(--ac)}
+.bnav button svg{width:22px;height:22px}
+
+/* Pages */
+.pg{display:none;padding:16px;max-width:800px;margin:0 auto}
+.pg.active{display:block;animation:pgIn .35s cubic-bezier(.16,1,.3,1)}
+@keyframes pgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.pg.active{animation:none}*{transition:none!important}}
+
+/* v3 utility + tool components */
+.muted{color:var(--t3);font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:380px){.grid2{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.wfull{width:100%!important;text-align:left}
+.result{margin-top:12px;text-align:center}
+.result:empty{display:none}
+.bigstat{font-size:42px;font-weight:800;line-height:1.1}
+.pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-top:6px}
+.ministat{background:var(--inp);border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:center}
+.msv{font-size:24px;font-weight:800}
+.msl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.plan-suggest{margin-top:12px;padding:12px;border-radius:10px;background:var(--inp);font-size:13px;text-align:left}
+.plan-suggest ul{margin:8px 0 0 0;padding-left:4px;list-style:none}
+.plan-suggest li{padding:3px 0;color:var(--t2)}
+.warn{margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,.12);color:var(--wn);font-size:12px;text-align:left;line-height:1.5}
+
+/* Goal cards */
+.goal{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.goal-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.goal-h .ge{font-size:24px}
+.goal-h .gt{flex:1;font-weight:700;font-size:14px}
+.pace{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}
+.pace.ahead{background:rgba(34,197,94,.15);color:var(--ok)}
+.pace.ontrack{background:rgba(59,130,246,.15);color:var(--ac)}
+.pace.behind{background:rgba(245,158,11,.15);color:var(--wn)}
+.pace.nodata{background:var(--inp);color:var(--t3)}
+.pbar{height:9px;border-radius:6px;background:var(--inp);overflow:hidden;margin:8px 0}
+.pbar>div{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--ac),var(--pu));transition:width .8s cubic-bezier(.16,1,.3,1)}
+
+/* Feature menu grid */
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.fcard{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:18px 14px;text-align:center;cursor:pointer;transition:.2s;text-decoration:none;color:var(--t1)}
+.fcard:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:var(--ac)}
+.fcard .fi{font-size:30px;margin-bottom:6px}
+.fcard .fl{font-weight:600;font-size:13px}
+.fcard .fd{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* PIN lock */
+.lock{position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.lock.show{display:flex}
+.lock .la{font-size:56px;margin-bottom:8px}
+.pindots{display:flex;gap:14px;margin:18px 0}
+.pindot{width:16px;height:16px;border-radius:50%;border:2px solid var(--bd)}
+.pindot.on{background:var(--ac);border-color:var(--ac)}
+.pinpad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.pinkey{height:72px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--t1);font-size:24px;font-weight:600;cursor:pointer;transition:.15s}
+.pinkey:active{background:var(--ac);color:#fff;transform:scale(.94)}
+
+/* Header */
+.hdr{text-align:center;padding:20px 16px 12px;max-width:800px;margin:0 auto}
+.hdr h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--pu),var(--pk));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hdr .sub{color:var(--t2);font-size:13px;margin-top:2px}
+.badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--ac),var(--pu));color:#fff;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-top:6px}
+
+/* Stats Grid */
+.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+.scard{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:14px;text-align:center;transition:.2s}
+.scard:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.scard .sv{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.scard .sl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.scard.ok .sv{background:linear-gradient(135deg,var(--ok),#4ade80);-webkit-background-clip:text;background-clip:text}
+.scard.wn .sv{background:linear-gradient(135deg,var(--wn),var(--or));-webkit-background-clip:text;background-clip:text}
+.scard.pu .sv{background:linear-gradient(135deg,var(--pu),var(--pk));-webkit-background-clip:text;background-clip:text}
+
+/* Progress Ring */
+.prc{display:flex;justify-content:center;margin:16px 0}
+.prg{position:relative;width:170px;height:170px}
+.prg svg{width:100%;height:100%;transform:rotate(-90deg)}
+.prg .rbg{fill:none;stroke:var(--bd);stroke-width:10}
+.prg .rfill{fill:none;stroke:url(#rg);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s ease}
+.prg .rtxt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.prg .rp{font-size:34px;font-weight:800}
+.prg .rl{font-size:11px;color:var(--t3)}
+
+/* Cards */
+.cd{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.ct{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+/* Habit Items */
+.hg{margin-bottom:18px}
+.hgt{font-size:13px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.hi{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;margin-bottom:4px;transition:.2s;border:1px solid transparent}
+.hi:hover{background:var(--bg3)}
+.hi.chk{background:rgba(34,197,94,.12);border-color:var(--ok)}
+.hcb{width:26px;height:26px;border-radius:7px;border:2px solid var(--bd);background:var(--inp);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0}
+.hcb.chk{background:var(--ok);border-color:var(--ok)}
+.hcb.chk::after{content:'✓';color:#fff;font-weight:700;font-size:15px}
+.hl{flex:1;font-size:14px}
+.hl .em{margin-right:5px}
+.hin{width:75px;padding:5px 8px;border-radius:8px;border:1px solid var(--bd);background:var(--inp);color:var(--t1);text-align:center;font-size:14px}
+.hin:focus{border-color:var(--ac);outline:none}
+.hu{font-size:11px;color:var(--t3);min-width:28px}
+
+/* Buttons */
+.btn{padding:11px 22px;border-radius:8px;border:none;font-weight:600;cursor:pointer;transition:.2s;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+.btn-p{background:var(--ac);color:#fff}.btn-p:hover{background:var(--ac2);transform:translateY(-1px)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-no{background:var(--no);color:#fff}
+.btn-o{background:transparent;border:1px solid var(--bd);color:var(--t1)}.btn-o:hover{border-color:var(--ac);color:var(--ac)}
+.btn-bl{width:100%;justify-content:center}
+.btn-s{padding:7px 12px;font-size:12px}
+
+/* Date Nav */
+.dnav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
+.dnav button{background:var(--bg2);border:1px solid var(--bd);color:var(--t1);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.dnav .cd-d{font-size:15px;font-weight:600;min-width:150px;text-align:center}
+
+/* Streak */
+.strk{display:flex;align-items:center;justify-content:center;gap:3px;margin:10px 0;flex-wrap:wrap}
+.sd{width:11px;height:11px;border-radius:3px;background:var(--bd);transition:.2s}
+.sd.ok{background:var(--ok)}.sd.prt{background:var(--wn)}.sd.mis{background:var(--no);opacity:.5}
+.sd.tod{outline:2px solid var(--ac);outline-offset:2px}.sd.fut{background:var(--inp);opacity:.3}
+
+/* Charts */
+.chc{position:relative;width:100%;margin:12px 0}
+.chc canvas{max-height:280px}
+
+/* Heatmap */
+.hmg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:10px 0}
+.hmc{aspect-ratio:1;border-radius:3px;background:var(--bd);font-size:8px;display:flex;align-items:center;justify-content:center;color:var(--t3)}
+.hmc.l1{background:rgba(34,197,94,.2)}.hmc.l2{background:rgba(34,197,94,.4)}.hmc.l3{background:rgba(34,197,94,.6)}.hmc.l4{background:var(--ok);color:#fff}
+
+/* Milestone */
+.mtl{padding-left:18px;border-left:2px solid var(--bd)}
+.mi{position:relative;padding:10px 0 10px 18px;margin-bottom:6px}
+.mi::before{content:'';position:absolute;left:-25px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--bd);border:2px solid var(--bg2)}
+.mi.ach::before{background:var(--ok)}.mi.cur::before{background:var(--ac);box-shadow:0 0 8px var(--ac)}
+.mi-t{font-weight:600;font-size:13px}.mi-d{font-size:11px;color:var(--t3)}
+
+/* Settings */
+.sr{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bd)}
+.sr-l{font-size:14px}.sr-l small{display:block;color:var(--t3);font-size:12px}
+.tgl{width:46px;height:24px;border-radius:12px;background:var(--bd);position:relative;cursor:pointer;transition:.2s}
+.tgl.on{background:var(--ac)}
+.tgl::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.tgl.on::after{left:24px}
+
+/* Score Badge */
+.scb{padding:3px 10px;border-radius:10px;font-size:12px;font-weight:700}
+.scb.ex{background:rgba(34,197,94,.15);color:var(--ok)}
+.scb.gd{background:rgba(59,130,246,.15);color:var(--ac)}
+.scb.nw{background:rgba(245,158,11,.15);color:var(--wn)}
+.scb.po{background:rgba(239,68,68,.15);color:var(--no)}
+
+/* Toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg2);color:var(--t1);padding:10px 22px;border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--bd);z-index:200;font-size:14px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Modal */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;display:none;align-items:center;justify-content:center;padding:20px}
+.mov.show{display:flex}
+.mo{background:var(--bg2);border-radius:var(--r);padding:22px;width:100%;max-width:440px;border:1px solid var(--bd)}
+.mo h3{margin-bottom:14px}
+
+/* Notes */
+.nota{width:100%;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--inp);color:var(--t1);resize:vertical;min-height:70px;font-size:14px}
+.nota:focus{border-color:var(--ac);outline:none}
+
+/* Print */
+@media print{body{background:#fff;color:#000;padding:0}.bnav,.hdr,.toast,.no-print{display:none!important}.pg{display:block!important;max-width:100%;padding:0}.pg:not(.pt){display:none!important}.cd{border:1px solid #ddd;break-inside:avoid}.scard .sv{-webkit-text-fill-color:#000;color:#000}}
+@media(max-width:400px){.sgrid{gap:6px}.scard{padding:10px}.scard .sv{font-size:22px}}
+@media(min-width:600px){.sgrid{grid-template-columns:repeat(4,1fr)}}
+.bnav{max-width:800px;margin:0 auto}
+</style>
+</head>
+<body data-theme="dark">
+
+<svg width="0" height="0"><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="50%" stop-color="#a855f7"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs></svg>
+
+<!-- HEADER -->
+<header class="hdr">
+  <h1>Lifestyle Challenge</h1>
+  <div class="sub">Transform Your Life — One Day at a Time</div>
+  <div style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:6px;flex-wrap:wrap">
+    <div class="badge" id="bdg"><span>🔥</span> <span id="bdgT">Day 1 of 101</span></div>
+    <div class="badge" style="background:linear-gradient(135deg,var(--ok),var(--cy));cursor:pointer" onclick="showPg('pgProfile')" id="userBadge">👤 Profile</div>
+  </div>
+</header>
+
+<!-- PAGE: DASHBOARD -->
+<div class="pg active" id="pgDash">
+  <div class="prc"><div class="prg">
+    <svg viewBox="0 0 180 180"><circle class="rbg" cx="90" cy="90" r="78"/><circle class="rfill" id="pRing" cx="90" cy="90" r="78" stroke-dasharray="490" stroke-dashoffset="490"/></svg>
+    <div class="rtxt"><div class="rp" id="oPct">0%</div><div class="rl">Overall Progress</div></div>
+  </div></div>
+
+  <div class="sgrid">
+    <div class="scard"><div class="sv" id="sDone">0</div><div class="sl">Days Done</div></div>
+    <div class="scard ok"><div class="sv" id="sStrk">0</div><div class="sl">Current Streak</div></div>
+    <div class="scard wn"><div class="sv" id="sToday">—</div><div class="sl">Today's Score</div></div>
+    <div class="scard pu"><div class="sv" id="sBest">0</div><div class="sl">Best Streak</div></div>
+  </div>
+
+  <div class="cd"><div class="ct">📅 Challenge Map</div><div class="strk" id="sMap"></div></div>
+  <div id="dashGoals"></div>
+  <div class="cd"><div class="ct">⚖️ Weight Trend</div><div class="chc"><canvas id="cWt"></canvas></div></div>
+  <div class="cd"><div class="ct">📊 Habit Completion Rate</div><div class="chc"><canvas id="cHab"></canvas></div></div>
+  <div class="cd"><div class="ct">🏆 Milestones</div><div class="mtl" id="mTL"></div></div>
+</div>
+
+<!-- PAGE: PROFILE -->
+<div class="pg" id="pgProfile">
+  <div id="profileContent"></div>
+</div>
+
+<!-- PAGE: TRACKER (dynamically built by buildTrackerForm) -->
+<div class="pg" id="pgTrack">
+  <div class="dnav">
+    <button onclick="chgDate(-1)">‹</button>
+    <div class="cd-d" id="tDate">Today</div>
+    <button onclick="chgDate(1)">›</button>
+  </div>
+  <div id="dForm"></div>
+</div>
+
+<!-- PAGE: CHALLENGES -->
+<div class="pg" id="pgChallenge">
+  <div id="challengeContent"></div>
+</div>
+
+<!-- PAGE: ANALYTICS -->
+<div class="pg" id="pgAna">
+  <div class="cd"><div class="ct">📈 Weekly Score Trend</div><div class="chc"><canvas id="cScore"></canvas></div></div>
+  <div class="cd"><div class="ct">💧 Water Intake</div><div class="chc"><canvas id="cWater"></canvas></div></div>
+  <div class="cd"><div class="ct">😴 Sleep Trend</div><div class="chc"><canvas id="cSleep"></canvas></div></div>
+  <div class="cd"><div class="ct">📚 Study Hours</div><div class="chc"><canvas id="cStudy"></canvas></div></div>
+  <div class="cd"><div class="ct">😊 Mood & Energy</div><div class="chc"><canvas id="cMood"></canvas></div></div>
+  <div class="cd"><div class="ct">🔥 Habit Heat Map</div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:4px"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    <div class="hmg" id="hmGrid"></div>
+    <div style="display:flex;gap:4px;align-items:center;margin-top:6px;font-size:10px;color:var(--t3)"><span>Less</span><div class="hmc" style="width:12px;height:12px"></div><div class="hmc l1" style="width:12px;height:12px"></div><div class="hmc l2" style="width:12px;height:12px"></div><div class="hmc l3" style="width:12px;height:12px"></div><div class="hmc l4" style="width:12px;height:12px"></div><span>More</span></div>
+  </div>
+  <div class="cd"><div class="ct">� Calorie Trend</div><div class="chc"><canvas id="cCalorie"></canvas></div></div>
+  <div class="cd"><div class="ct">👟 Activity (Steps)</div><div class="chc"><canvas id="cSteps"></canvas></div></div>
+  <div class="cd"><div class="ct">� Weekly Review</div><div id="wRev"></div></div>
+</div>
+
+<!-- PAGE: COMPARE -->
+<div class="pg" id="pgCompare">
+  <div id="compareContent"></div>
+</div>
+
+<!-- PAGE: PRINT -->
+<div class="pg" id="pgPrint">
+  <div class="cd">
+    <div class="ct">🖨️ Printable Tracking Sheets</div>
+    <p style="font-size:13px;color:var(--t3);margin-bottom:10px">Generate A4-ready tracking sheets for printing or PDF export.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="printWeek()">📄 Weekly Sheet</button>
+      <button class="btn btn-o" onclick="printReport()">📄 Full Report</button>
+    </div>
+  </div>
+  <div id="pSheet" class="cd" style="display:none"></div>
+</div>
+
+<!-- PAGE: SETTINGS -->
+<div class="pg" id="pgSet">
+  <div class="cd"><div class="ct">⚙️ Challenge Settings</div>
+    <div class="sr"><div class="sr-l">Duration<small>10, 25, 50, 75, or 101 days</small></div><select class="hin" id="sDur" style="width:95px" onchange="updDur()"><option value="10">10 days</option><option value="25">25 days</option><option value="50">50 days</option><option value="75">75 days</option><option value="101" selected>101 days</option></select></div>
+    <div class="sr"><div class="sr-l">Start Date<small>When the challenge begins</small></div><input type="date" class="hin" id="sStart" style="width:135px" onchange="updStart()"></div>
+    <div class="sr"><div class="sr-l">Dark Mode</div><div class="tgl on" id="tTheme" onclick="tglTheme()"></div></div>
+    <div class="sr"><div class="sr-l">Cheat Days / Week</div><select class="hin" id="sCheat" style="width:70px" onchange="saveSt()"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select></div>
+    <div class="sr"><div class="sr-l">Rest Days / Week</div><select class="hin" id="sRest" style="width:70px" onchange="saveSt()"><option value="1" selected>1</option><option value="2">2</option></select></div>
+    <div class="sr"><div class="sr-l">Target Weight (kg)</div><input type="number" class="hin" id="sTgtW" placeholder="75" step="0.5" style="width:75px" onchange="saveSt()"></div>
+    <div class="sr"><div class="sr-l">Water Target (L)</div><input type="number" class="hin" id="sWatT" value="3.5" step="0.5" style="width:75px" onchange="saveSt()"></div>
+    <div class="sr"><div class="sr-l">Protein Target (g)</div><input type="number" class="hin" id="sProT" value="120" step="10" style="width:75px" onchange="saveSt()"></div>
+    <div class="sr"><div class="sr-l">Calorie Target (kcal)</div><input type="number" class="hin" id="sCalT" value="2000" step="100" style="width:75px" onchange="saveSt()"></div>
+    <div class="sr"><div class="sr-l">Sleep Target (hrs)</div><input type="number" class="hin" id="sSleepT" value="7" step="0.5" style="width:75px" onchange="saveSt()"></div>
+    <div class="sr"><div class="sr-l">Steps Target</div><input type="number" class="hin" id="sStepsT" value="10000" step="1000" style="width:75px" onchange="saveSt()"></div>
+  </div>
+  <div class="cd"><div class="ct">🔒 Privacy & Sharing</div>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:10px">Control what data is shared when comparing with others.</p>
+    <div id="privacySettings"></div>
+  </div>
+  <div class="cd"><div class="ct">� PIN Lock</div>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:10px">Protect this profile with a 4-digit PIN. Asked on app open & profile switch.</p>
+    <div id="pinStatus"></div>
+  </div>
+  <div class="cd"><div class="ct">�💾 Data Management</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-p btn-s" onclick="expJSON()">📥 Export JSON</button>
+      <button class="btn btn-o btn-s" onclick="expCSV()">📥 Export CSV</button>
+      <button class="btn btn-o btn-s" onclick="document.getElementById('impF').click()">📤 Import</button>
+      <input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-o btn-s" onclick="expFullBackupFile()">�️ Backup ALL Profiles</button>
+      <button class="btn btn-o btn-s" onclick="document.getElementById('fullBackupF').click()">♻️ Restore Backup</button>
+      <input type="file" id="fullBackupF" accept=".json" style="display:none" onchange="impFullBackupFile(event)">
+    </div>
+    <button class="btn btn-no btn-s" onclick="confReset()">�️ Reset This Profile's Data</button>
+  </div>
+  <div class="cd"><div class="ct">🔄 Restart Challenge</div>
+    <p style="font-size:13px;color:var(--t3);margin-bottom:10px">Start a new challenge. Export current data first!</p>
+    <button class="btn btn-ok" onclick="restartCh()">🚀 Start New Challenge</button>
+  </div>
+  <div class="cd"><div class="ct">ℹ️ About</div>
+    <p style="font-size:12px;color:var(--t3)"><strong>Lifestyle Challenge Tracker v3.0</strong><br>Open-source lifestyle tracker.<br>100% local. Zero cloud. Zero tracking. Works offline (PWA).<br>iPhone: Share → Add to Home Screen.</p>
+  </div>
+</div>
+
+<!-- PAGE: GOALS -->
+<div class="pg" id="pgGoals">
+  <div id="goalsContent"></div>
+</div>
+
+<!-- PAGE: TOOLS / CALCULATORS -->
+<div class="pg" id="pgTools">
+  <div id="toolsContent"></div>
+</div>
+
+<!-- PAGE: MORE (feature menu) -->
+<div class="pg" id="pgMore">
+  <div class="cd"><div class="ct">⚡ More Features</div>
+    <div class="fgrid">
+      <div class="fcard" onclick="showPg('pgChallenge')"><div class="fi">🏆</div><div class="fl">Challenges</div><div class="fd">Start / switch challenge</div></div>
+      <div class="fcard" onclick="showPg('pgTools')"><div class="fi">🧮</div><div class="fl">Health Tools</div><div class="fd">BMI, calories, planner</div></div>
+      <div class="fcard" onclick="showPg('pgCompare')"><div class="fi">🔀</div><div class="fl">Compare</div><div class="fd">vs other users</div></div>
+      <div class="fcard" onclick="showPg('pgProfile')"><div class="fi">👤</div><div class="fl">Profiles</div><div class="fd">Switch / add user</div></div>
+      <div class="fcard" onclick="showPg('pgPrint')"><div class="fi">🖨️</div><div class="fl">Print Sheets</div><div class="fd">A4 / PDF export</div></div>
+      <div class="fcard" onclick="showPg('pgSet')"><div class="fi">⚙️</div><div class="fl">Settings</div><div class="fd">Targets, PIN, backup</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PIN LOCK SCREEN -->
+<div class="lock" id="lockScreen">
+  <div class="la" id="lockAvatar">🔒</div>
+  <div style="font-weight:700;font-size:17px" id="lockName">Enter PIN</div>
+  <div class="muted" id="lockMsg">Enter your 4-digit PIN</div>
+  <div class="pindots" id="pinDots"><div class="pindot"></div><div class="pindot"></div><div class="pindot"></div><div class="pindot"></div></div>
+  <div class="pinpad">
+    <button class="pinkey" onclick="pinPress('1')">1</button><button class="pinkey" onclick="pinPress('2')">2</button><button class="pinkey" onclick="pinPress('3')">3</button>
+    <button class="pinkey" onclick="pinPress('4')">4</button><button class="pinkey" onclick="pinPress('5')">5</button><button class="pinkey" onclick="pinPress('6')">6</button>
+    <button class="pinkey" onclick="pinPress('7')">7</button><button class="pinkey" onclick="pinPress('8')">8</button><button class="pinkey" onclick="pinPress('9')">9</button>
+    <button class="pinkey" style="visibility:hidden"></button><button class="pinkey" onclick="pinPress('0')">0</button><button class="pinkey" onclick="pinDel()">⌫</button>
+  </div>
+  <button class="btn btn-o btn-s" style="margin-top:18px" onclick="pinForgot()">Forgot PIN?</button>
+</div>
+
+<!-- CLOUD LOGIN OVERLAY -->
+<div class="lock show" id="cloudLogin" style="background:var(--bg);z-index:400">
+  <div class="cd" style="max-width:320px;width:100%;text-align:center">
+    <h2 style="margin-bottom:6px">Cloud Login</h2>
+    <p class="muted" style="margin-bottom:16px">Enter your username and master password to sync your encrypted data.</p>
+    <input type="text" id="clUser" class="hin wfull" placeholder="Username" style="margin-bottom:10px" autocomplete="off">
+    <input type="password" id="clPass" class="hin wfull" placeholder="Password" style="margin-bottom:16px">
+    <button class="btn btn-p btn-bl" onclick="cloudLoginBtn()" id="clBtn">Login & Sync</button>
+    <button class="btn btn-o btn-bl" onclick="showCloudConfig()" style="margin-top:10px;font-size:12px">⚙️ GitHub Config</button>
+  </div>
+</div>
+
+<!-- CLOUD CONFIG MODAL -->
+<div class="mov" id="cloudConfigMo">
+  <div class="mo">
+    <h3>GitHub Cloud Sync Config</h3>
+    <div class="fld" style="margin-bottom:10px"><label>GitHub Token (PAT)</label><input type="password" id="ccToken" class="hin"></div>
+    <div class="fld" style="margin-bottom:10px"><label>GitHub Username</label><input type="text" id="ccUser" class="hin"></div>
+    <div class="fld" style="margin-bottom:16px"><label>Repository Name</label><input type="text" id="ccRepo" class="hin"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o btn-s" onclick="document.getElementById('cloudConfigMo').classList.remove('show')">Cancel</button>
+      <button class="btn btn-ok btn-s" onclick="saveCloudConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <button class="active" onclick="showPg('pgDash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+  <button onclick="showPg('pgTrack',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Track</button>
+  <button onclick="showPg('pgGoals',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Goals</button>
+  <button onclick="showPg('pgAna',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Stats</button>
+  <button onclick="showPg('pgMore',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<div class="mov" id="mOv" onclick="closeMo()"><div class="mo" onclick="event.stopPropagation()"><h3 id="moT">Confirm</h3><p id="moM" style="margin-bottom:16px;color:var(--t2);font-size:14px"></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-o btn-s" onclick="closeMo()">Cancel</button><button class="btn btn-no btn-s" id="moC">Confirm</button></div></div></div>
+
+<script src="api.js"></script>
+<script src="core.js"></script>
+<script src="tools.js"></script>
+<script src="app.js"></script>
+<script src="analytics.js"></script>
+<script src="print.js"></script>
+<script>
+// Register Service Worker for PWA / offline
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(r => {
+    console.log('SW registered:', r.scope);
+  }).catch(e => console.log('SW failed:', e));
+}
+</script>
+</body>
+</html>
