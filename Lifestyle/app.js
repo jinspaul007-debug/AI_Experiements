@@ -10,19 +10,19 @@ function HNAMES() { const m={}; getActiveHabits().forEach(h=>{m[h.id]=h.name;});
 
 const DAILY_QUOTES = [
   {en: "True transformation requires consistent dedication. Every small choice you make today builds the foundation of the life you want tomorrow. Don't look for immediate results; trust the process, stay disciplined, and eventually you will become unstoppable.", 
-   ml: "നിങ്ങളുടെ ഉള്ളിലെ തീ കെടാതെ സൂക്ഷിക്കുക. ഓരോ ദിവസവും ഒരു പുതിയ തുടക്കമാണ്. മാറ്റങ്ങൾ പെട്ടെന്ന് സംഭവിക്കില്ലെങ്കിലും, നിങ്ങളുടെ നിരന്തരമായ പ്രയത്നം ഒരു നാൾ വലിയ വിജയമായി മാറും. ലക്ഷ്യത്തിലേക്കുള്ള യാത്രയിൽ തളരാതിരിക്കുക."},
+   ml: "നിങ്ങളുടെ ഉള്ളിലെ തീ കെടാതെ സൂക്ഷിക്കുക. ഓരോ ദിവസവും ഒരു പുതിയ തുടക്കമാണ്. മാറ്റങ്ങൾ പെട്ടെന്ന് സംഭവിക്കില്ലെങ്കിലും, നിങ്ങളുടെ നിരന്തരമായ പ്രയത്നം ഒരു നാൾ വലിയ വിജയമായി മാറും."},
   
   {en: "Your mind is a powerful thing. When you fill it with positive thoughts and focus entirely on your goals, your life will start to change. Push through the discomfort, because the pain of discipline is far less than the pain of regret.", 
-   ml: "സ്വപ്നങ്ങൾ യാഥാർത്ഥ്യമാകണമെങ്കിൽ ഉറച്ച തീരുമാനങ്ങൾ എടുക്കണം. ഇന്നത്തെ നിങ്ങളുടെ ചെറിയ ത്യാഗങ്ങൾ നാളത്തെ നിങ്ങളുടെ സന്തോഷത്തിന് കാരണമാകും. മറ്റുള്ളവർ എന്ത് വിചാരിക്കും എന്ന് ചിന്തിക്കാതെ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് മുന്നേറുക."},
+   ml: "സ്വപ്നങ്ങൾ യാഥാർത്ഥ്യമാകണമെങ്കിൽ ഉറച്ച തീരുമാനങ്ങൾ എടുക്കണം. മറ്റുള്ളവർ എന്ത് വിചാരിക്കും എന്ന് ചിന്തിക്കാതെ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് മുന്നേറുക."},
   
   {en: "There will be days when you feel like giving up, when the progress seems invisible. Remember why you started in the first place. You are stronger than your excuses. Show up for yourself, even when it's hard.", 
-   ml: "ശരീരത്തിനും മനസ്സിനും ഒരുപോലെ കരുത്ത് നൽകേണ്ടത് അത്യാവശ്യമാണ്. ആരോഗ്യകരമായ ശീലങ്ങൾ വളർത്തിയെടുക്കുന്നത് ഒരു ദിവസത്തെ കാര്യമല്ല, അത് ഒരു ജീവിതചര്യയാണ്. ഓരോ ചുവടും നിങ്ങളെ വിജയത്തിലേക്ക് അടുപ്പിക്കുന്നു."},
+   ml: "ശരീരത്തിനും മനസ്സിനും ഒരുപോലെ കരുത്ത് നൽകേണ്ടത് അത്യാവശ്യമാണ്. ആരോഗ്യകരമായ ശീലങ്ങൾ വളർത്തിയെടുക്കുന്നത് ഒരു ദിവസത്തെ കാര്യമല്ല, അത് ഒരു ജീവിതചര്യയാണ്."},
   
   {en: "Success is not a big step in the future, it is a small step taken right now. By mastering your morning routines, tracking your progress, and taking control of your daily habits, you master your destiny.", 
-   ml: "പരാജയങ്ങളെ ഭയപ്പെടാതിരിക്കുക, അവ വിജയത്തിലേക്കുള്ള പാഠങ്ങളാണ്. ഒരു തവണ വീണാൽ അടുത്ത തവണ കൂടുതൽ കരുത്തോടെ എഴുന്നേൽക്കുക. നിങ്ങളുടെ ആഗ്രഹങ്ങൾക്കുവേണ്ടി പോരാടാൻ നിങ്ങൾ മാത്രമേയുള്ളൂ എന്നോർക്കുക."},
+   ml: "പരാജയങ്ങളെ ഭയപ്പെടാതിരിക്കുക, അവ വിജയത്തിലേക്കുള്ള പാഠങ്ങളാണ്. ഒരു തവണ വീണാൽ അടുത്ത തവണ കൂടുതൽ കരുത്തോടെ എഴുന്നേൽക്കുക."},
   
   {en: "Motivation gets you going, but discipline keeps you growing. Set your standards high, embrace the grind, and refuse to settle for mediocrity. The best version of yourself is waiting on the other side of consistency.", 
-   ml: "സ്വയം വിശ്വസിക്കുക, അതാണ് വിജയത്തിന്റെ ആദ്യപടി. നിങ്ങളുടെ കഴിവുകളിൽ സംശയം തോന്നുന്ന നിമിഷങ്ങളിൽ, നിങ്ങൾ ഇതുവരെ താണ്ടിയ ദൂരത്തെക്കുറിച്ച് ഓർക്കുക. മുന്നോട്ടുള്ള വഴിയിൽ ഒരുപാട് അത്ഭുതങ്ങൾ കാത്തിരിപ്പുണ്ട്."}
+   ml: "സ്വയം വിശ്വസിക്കുക, അതാണ് വിജയത്തിന്റെ ആദ്യപടി. നിങ്ങളുടെ കഴിവുകളിൽ സംശയം തോന്നുന്ന നിമിഷങ്ങളിൽ, നിങ്ങൾ ഇതുവരെ താണ്ടിയ ദൂരത്തെക്കുറിച്ച് ഓർക്കുക."}
 ];
 
 // ── Page Navigation ──
@@ -398,7 +398,8 @@ function refreshDash() {
 
   // Milestones
   const ml=document.getElementById('mTL'); ml.innerHTML='';
-  MILESTONES.forEach(m=>{
+  const mStones = generateMilestones(s.duration);
+  mStones.forEach(m=>{
     const el=document.createElement('div'); el.className='mi';
     if(cap>=m.day) el.classList.add('ach');
     if(cap===m.day) el.classList.add('cur');
@@ -630,9 +631,7 @@ function doCreateProfile() {
   const avatar = avEl ? avEl.dataset.av : '🦊';
   createProfile(name, avatar);
   toast('✅ Profile created: '+name);
-  if(!getChallenges().length) { showPg('pgChallenge'); return; }
-  loadActiveChallenge();
-  init();
+  showPg('pgTools'); // Go to Health Tools next
 }
 function confirmDelProfile(id) {
   const profiles = getProfiles();
@@ -654,6 +653,11 @@ function renderChallenges() {
     html += '<div class="cd" style="border-color:var(--ac)"><div class="ct">'+ct.emoji+' Active: '+activeChallenge.name+'</div>';
     html += '<div style="font-size:13px;color:var(--t2)">Day '+Math.min(dn,s.duration)+' of '+s.duration+' &bull; Started '+s.startDate+'</div>';
     html += '<div style="font-size:12px;color:var(--t3);margin-top:4px">Tracking '+activeChallenge.habits.length+' habits</div></div>';
+    const actBtns = document.getElementById('chActionBtns');
+    if(actBtns) actBtns.style.display = 'flex';
+  } else {
+    const actBtns = document.getElementById('chActionBtns');
+    if(actBtns) actBtns.style.display = 'none';
   }
 
   // Challenge history
@@ -789,6 +793,52 @@ function switchChallenge(chId) {
   if(activeChallenge) { const s=getS(); s.duration=activeChallenge.duration; s.startDate=activeChallenge.startDate; setS(s); }
   toast('🔄 Switched challenge');
   renderChallenges();
+}
+
+function showExtendChallengeMo() {
+  const s = getS();
+  openMo('Extend Challenge', 'Increase duration of active challenge (current: '+s.duration+' days). How many days total?', () => {
+    const val = prompt('Enter new total duration (e.g. 150):', s.duration);
+    if(val) {
+      const p = parseInt(val);
+      if(p > s.duration) {
+        s.duration = p;
+        if(activeChallenge) activeChallenge.duration = p;
+        setS(s);
+        const chs = getChallenges();
+        const ci = chs.findIndex(c => c.id === activeChallenge.id);
+        if(ci>=0) { chs[ci].duration = p; setChallenges(chs); }
+        toast('✅ Challenge extended to ' + p + ' days');
+        renderChallenges();
+        closeMo();
+      } else {
+        toast('⚠️ New duration must be greater than current');
+      }
+    }
+  });
+}
+
+function showEditHabitsMo() {
+  if(!activeChallenge) return;
+  const habits = activeChallenge.habits || [];
+  openMo('Edit Habits', 'You can add or remove custom habits mid-challenge.', () => {
+    const val = prompt('Enter habit names separated by commas (e.g. Drink water, Read 10 pages). They will be added to Custom Habits:', '');
+    if(val) {
+      const names = val.split(',').map(n => n.trim()).filter(n => n);
+      names.forEach(n => {
+        const id = 'cust_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+        activeChallenge.customHabitDefs = activeChallenge.customHabitDefs || [];
+        activeChallenge.customHabitDefs.push({id, name:n, emoji:'✏️', group:'custom'});
+        activeChallenge.habits.push(id);
+      });
+      const chs = getChallenges();
+      const ci = chs.findIndex(c => c.id === activeChallenge.id);
+      if(ci>=0) { chs[ci] = activeChallenge; setChallenges(chs); }
+      toast('✅ Added ' + names.length + ' new habits');
+      renderChallenges();
+      closeMo();
+    }
+  });
 }
 
 // ── Comparison Page ──
@@ -994,23 +1044,106 @@ function pinPress(n){
   if(pinBuffer.length===4) setTimeout(pinComplete,150);
 }
 function pinDel(){ pinBuffer=pinBuffer.slice(0,-1); updatePinDots(); }
+let afterUnlock = function(){ proceedInit(); };
+let globalPin = null;
+
+async function syncAndLoginWithPin(pin) {
+  const pinHash = hashPin(pin);
+  const profiles = getProfiles();
+  const keys = Object.keys(profiles);
+  const match = keys.find(k => profiles[k].pinHash === pinHash);
+
+  if (match) {
+    // Found locally — still configure GitHubAPI so triggerSync works!
+    setActiveUserId(match);
+    activeUser = profiles[match];
+    globalPin = pinHash;
+    if (GitHubAPI.isConfigured()) {
+      GitHubAPI.setPath('Lifestyle/data_' + pinHash + '.enc');
+      GitHubAPI.setEncryptionKey(pin);
+      localStorage.setItem('lc_cloud_auth', '1');
+    }
+    closeLock();
+    proceedInit();
+  } else {
+    // Not found locally. Try fetching from Cloud using PIN.
+    const clBtn = document.getElementById('lockMsg');
+    clBtn.textContent = 'Checking Cloud Sync...';
+    
+    if (GitHubAPI.isConfigured()) {
+      try {
+        GitHubAPI.setPath('Lifestyle/data_' + pinHash + '.enc');
+        GitHubAPI.setEncryptionKey(pin);
+        
+        const data = await GitHubAPI.fetchData();
+        if (data) {
+          // Import
+          importFullBackup(data);
+          // Retry finding
+          const p2 = getProfiles();
+          const m2 = Object.keys(p2).find(k => p2[k].pinHash === pinHash);
+          if (m2) {
+            setActiveUserId(m2);
+            activeUser = p2[m2];
+            globalPin = pinHash;
+            localStorage.setItem('lc_cloud_auth', '1');
+            closeLock();
+            toast('✅ Account restored from Cloud!');
+            proceedInit();
+            return;
+          }
+        }
+      } catch (err) {
+        if(err.message.includes('Wrong encryption key')) {
+          clBtn.textContent = 'Incorrect PIN. Try again.';
+          clBtn.style.color = 'var(--no)';
+          setTimeout(() => clBtn.style.color = '', 1200);
+          pinBuffer = ''; updatePinDots();
+          return;
+        }
+      }
+    }
+    
+    // Fallback: Create new profile
+    closeLock();
+    const name = prompt('New PIN detected. Enter your name to create profile:');
+    if (!name) { location.reload(); return; }
+    
+    const id = createProfile(name, '🌟');
+    const p = getProfiles();
+    p[id].pinHash = pinHash;
+    setProfiles(p);
+    
+    setActiveUserId(id);
+    activeUser = p[id];
+    globalPin = pinHash;
+    
+    if (GitHubAPI.isConfigured()) {
+      localStorage.setItem('lc_cloud_auth', '1');
+      GitHubAPI.setPath('Lifestyle/data_' + pinHash + '.enc');
+      GitHubAPI.setEncryptionKey(pin);
+      await GitHubAPI.pushData(exportFullBackup());
+      toast('✅ Profile saved to Cloud!');
+    }
+    
+    proceedInit();
+  }
+}
+
 function pinComplete(){
   if(pinMode==='set'){
     if(!pinNewFirst){ pinNewFirst=pinBuffer; pinBuffer=''; updatePinDots(); document.getElementById('lockMsg').textContent='Confirm your PIN'; return; }
     if(pinNewFirst===pinBuffer){ setPin(pinBuffer); closeLock(); renderPinStatus(); toast('🔒 PIN set'); }
     else { pinNewFirst=''; pinBuffer=''; updatePinDots(); document.getElementById('lockMsg').textContent='PINs did not match. Try again.'; }
   } else {
-    if(verifyPin(pinBuffer)){ closeLock(); afterUnlock(); }
-    else { pinBuffer=''; updatePinDots(); const m=document.getElementById('lockMsg'); m.textContent='Wrong PIN. Try again.'; m.style.color='var(--no)'; setTimeout(()=>m.style.color='',1200); }
+    syncAndLoginWithPin(pinBuffer);
   }
 }
+
 function pinForgot(){
   if(pinMode==='set'){ closeLock(); return; }
-  openMo('Forgot PIN?','To protect privacy, the only option is to delete THIS profile and its data. Continue?',()=>{
-    closeMo(); const id=activeUser.id; closeLock(); deleteProfile(id);
-  });
+  alert("If you forgot your PIN, your local encrypted cloud data cannot be decrypted. You can setup a new profile by clearing local storage.");
 }
-let afterUnlock = function(){ proceedInit(); };
 
 // ═══════════════ FULL BACKUP ═══════════════
 function expFullBackupFile() {
@@ -1085,7 +1218,7 @@ async function cloudLoginBtn() {
     }
     
     // Successfully authenticated
-    sessionStorage.setItem('lc_cloud_auth', '1');
+    localStorage.setItem('lc_cloud_auth', '1');
     document.getElementById('cloudLogin').classList.remove('show');
     init();
     
@@ -1099,7 +1232,7 @@ async function cloudLoginBtn() {
 
 function cloudLogout() {
   openMo('Logout?', 'This will clear local device data and return to login screen. Ensure you are synced!', () => {
-    sessionStorage.removeItem('lc_cloud_auth');
+    localStorage.removeItem('lc_cloud_auth');
     localStorage.clear();
     GitHubAPI.saveConfig(GitHubAPI.config.token, GitHubAPI.config.username, GitHubAPI.config.repo);
     location.reload();
@@ -1107,37 +1240,22 @@ function cloudLogout() {
 }
 
 function initCloudAuth() {
-  if(sessionStorage.getItem('lc_cloud_auth') === '1') return true;
+  if(localStorage.getItem('lc_cloud_auth') === '1') return true;
   document.getElementById('cloudLogin').classList.add('show');
   return false;
 }
 
 // ── Init ──
 function init() {
-  if(!initCloudAuth()) return; // Block initialization if not logged in
-
   // Migrate v1 data if present
   if(localStorage.getItem('lc_s') || localStorage.getItem('lc_d')) migrateV1Data();
 
-  // Load active user
-  const userId = getActiveUserId();
-  const profiles = getProfiles();
-  if(userId && profiles[userId]) {
-    activeUser = profiles[userId];
-    loadActiveChallenge();
-  } else if(Object.keys(profiles).length) {
-    const first = Object.keys(profiles)[0];
-    setActiveUserId(first);
-    activeUser = profiles[first];
-    loadActiveChallenge();
-  }
-
-  // PIN gate
-  if(activeUser && activeUser.pinHash) {
-    pinMode='verify'; afterUnlock=proceedInit; openLock('Enter your 4-digit PIN');
-    return;
-  }
-  proceedInit();
+  // Show Master PIN gate automatically
+  pinMode = 'verify'; 
+  pinNewFirst = '';
+  document.getElementById('lockAvatar').textContent = '🔒';
+  document.getElementById('lockName').textContent = 'Welcome Back';
+  openLock('Enter PIN to access your data');
 }
 
 function proceedInit() {
@@ -1166,30 +1284,59 @@ function proceedInit() {
     btn.className = 'badge';
     btn.style.background = 'linear-gradient(135deg, var(--no), #b91c1c)';
     btn.style.cursor = 'pointer';
-    btn.textContent = '🚪 Logout';
-    btn.onclick = cloudLogout;
+    btn.textContent = '🚪 Exit';
+    btn.onclick = () => location.reload();
     userBadge.parentNode.appendChild(btn);
+  }
+
+  // Check if we need to show tools or challenge setup
+  if(!getChallenges().length) {
+    if(!getBody().startWeight) showPg('pgTools');
+    else showPg('pgChallenge');
+    return;
   }
 
   showPg('pgDash');
 }
 
 // ── Timetable Logic ──
+let ttTab = 'schedule';
+function setTtTab(tab) {
+  ttTab = tab;
+  document.getElementById('btnTabSched').className = 'btn btn-s ' + (tab === 'schedule' ? 'btn-p' : 'btn-o');
+  document.getElementById('btnTabPlan').className = 'btn btn-s ' + (tab === 'todo' ? 'btn-p' : 'btn-o');
+  renderTimetable();
+}
+
 function renderTimetable() {
   const el = document.getElementById('timetableList');
   if(!el) return;
-  const tt = getTimetable();
+  const selDay = document.getElementById('ttDaySel').value;
+  let tt = getTimetable();
   if(!tt.length) {
-    el.innerHTML = '<div style="color:var(--t3);font-size:13px;font-style:italic">No schedule added yet.</div>';
+    el.innerHTML = '<div style="color:var(--t3);font-size:13px;font-style:italic">No blocks added yet.</div>';
     return;
   }
+  // Filter by tab and day
+  const filtered = tt.map((t,i)=>({t,i})).filter(x => {
+    const matchType = (ttTab === 'todo') ? (x.t.type === 'todo') : (x.t.type !== 'todo');
+    const matchDay = (selDay === 'All') || (x.t.dayOfWeek === selDay) || (!x.t.dayOfWeek);
+    return matchType && matchDay;
+  });
+
+  if(!filtered.length) {
+    el.innerHTML = '<div style="color:var(--t3);font-size:13px;font-style:italic">No entries for this filter.</div>';
+    return;
+  }
+
   // Sort by time
-  tt.sort((a,b) => a.time.localeCompare(b.time));
+  filtered.sort((a,b) => a.t.time.localeCompare(b.t.time));
   
   let html = '';
-  tt.forEach((slot, idx) => {
+  filtered.forEach(slot => {
+    const t = slot.t;
     // format time 14:00 to 02:00 PM
-    let [h, m] = slot.time.split(':');
+    let [h, m] = t.time.split(':');
     let hh = parseInt(h);
     let ampm = hh >= 12 ? 'PM' : 'AM';
     hh = hh % 12 || 12;
@@ -1197,8 +1344,8 @@ function renderTimetable() {
     
     html += '<div style="display:flex;align-items:center;padding:10px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px">';
     html += '<div style="background:rgba(59,130,246,.15);color:var(--ac);font-weight:700;padding:6px 10px;border-radius:6px;font-size:12px;margin-right:12px;font-family:monospace">' + tFmt + '</div>';
-    html += '<div style="flex:1;font-size:14px">' + slot.desc + '</div>';
-    html += '<button class="btn btn-no btn-s" style="padding:4px 8px" onclick="deleteTimetableSlot(' + idx + ')">✕</button>';
+    html += '<div style="flex:1;font-size:14px"><div style="color:var(--t2);font-size:10px;font-weight:bold">'+(t.dayOfWeek||'All Days')+'</div>' + t.desc + '</div>';
+    html += '<button class="btn btn-no btn-s" style="padding:4px 8px" onclick="deleteTimetableSlot(' + slot.i + ')">✕</button>';
     html += '</div>';
   });
   el.innerHTML = html;
@@ -1207,16 +1354,17 @@ function renderTimetable() {
 function addTimetableSlot() {
   const time = document.getElementById('ttTime').value;
   const desc = document.getElementById('ttDesc').value.trim();
+  const dayOfWeek = document.getElementById('ttDaySel').value;
   if(!time || !desc) { toast('⚠️ Enter both time and description'); return; }
   
   const tt = getTimetable();
-  tt.push({time, desc});
+  tt.push({time, desc, type: ttTab, dayOfWeek: dayOfWeek === 'All' ? null : dayOfWeek});
   setTimetable(tt);
   
   document.getElementById('ttTime').value = '';
   document.getElementById('ttDesc').value = '';
   renderTimetable();
-  toast('✅ Schedule updated');
+  toast('✅ Block added');
 }
 
 function deleteTimetableSlot(idx) {
@@ -1348,7 +1496,8 @@ function saveHealthGoals() {
   setS(s);
   
   toast('✅ Goals synced to Tracker & Analytics!');
-  setTimeout(() => showPg('pgDash'), 1000);
+  if(!getChallenges().length) setTimeout(() => showPg('pgChallenge'), 500);
+  else setTimeout(() => showPg('pgDash'), 1000);
 }
 
 // ── Analytics Page ──

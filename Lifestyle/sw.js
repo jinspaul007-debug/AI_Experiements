@@ -3,7 +3,7 @@
    Offline caching for PWA support
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'life101-v4';
+const CACHE_NAME = 'life101-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const ASSETS = [
   './analytics.js',
   './print.js',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js'
 ];

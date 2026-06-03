@@ -21,14 +21,14 @@ const DEFAULT_HABITS = [
   {id:'water',name:'Water Intake',emoji:'💧',group:'nutrition',hasInput:true,inputType:'number',field:'waterLitres',unit:'L',step:'0.5'},
   {id:'calorieTrack',name:'Calorie Tracking',emoji:'🔥',group:'nutrition',hasInput:true,inputType:'number',field:'calories',unit:'kcal'},
   {id:'study',name:'Upskill Study',emoji:'💻',group:'learning',hasInput:true,inputType:'number',field:'studyMins',unit:'min'},
-  {id:'reading',name:'Read Book',emoji:'📖',group:'learning',hasInput:true,inputType:'number',field:'readPages',unit:'pg'},
+  {id:'reading',name:'Read Book',emoji:'📖',group:'evening',hasInput:true,inputType:'number',field:'readPages',unit:'pg'},
   {id:'communication',name:'Language Practice',emoji:'🗣️',group:'learning',hasInput:true,inputType:'number',field:'commMins',unit:'min'},
   {id:'qualityTime',name:'Quality Family Time',emoji:'❤️',group:'evening'},
   {id:'sleep7hrs',name:'7+ Hours Sleep',emoji:'😴',group:'evening',hasInput:true,inputType:'number',field:'sleepHours',unit:'hrs',step:'0.5'},
   {id:'sleepQuality',name:'Sleep Quality',emoji:'🌙',group:'evening',hasInput:true,inputType:'select',field:'sleepQuality',options:['Poor','Fair','Good','Very Good','Excellent']},
   {id:'bedTime',name:'Bed Time',emoji:'🛏️',group:'evening',hasInput:true,inputType:'time',field:'bedTime'},
   {id:'weightNight',name:'Night Weight',emoji:'⚖️',group:'evening',hasInput:true,inputType:'number',field:'weightNight',unit:'kg',step:'0.1'},
-  {id:'prayerTime',name:'Prayer Time',emoji:'🙏',group:'morning'}
+  {id:'prayerTime',name:'Prayer Time',emoji:'🙏',group:'evening'}
 ];
 
 const HABIT_GROUPS = {
@@ -54,19 +54,27 @@ const CHALLENGE_TYPES = {
   custom:{name:'Custom Challenge',emoji:'✏️',desc:'Choose your own habits and goals',habits:['prayerTime','weightMorning','weightNight']}
 };
 
-const MILESTONES = [
-  {day:1,t:'Day 1 — The Beginning',d:'You started! The hardest part is done.'},
-  {day:7,t:'Week 1 Complete',d:'First week survived. Habits forming.'},
-  {day:14,t:'2 Weeks Strong',d:'Your brain is starting to rewire.'},
-  {day:21,t:'21 Days — Habit Forming',d:'Science says 21 days forms habits.'},
-  {day:30,t:'1 Month Warrior',d:'30 days of discipline!'},
-  {day:50,t:'Halfway Hero',d:'Past the halfway mark.'},
-  {day:66,t:'66 Days — Habit Locked',d:'Research: 66 days = automatic.'},
-  {day:75,t:'75 Hard Complete',d:'You crushed 75 Hard!'},
-  {day:90,t:'90 Days — Transformation',d:'3 months. Look back at Day 1.'},
-  {day:100,t:'Century Mark!',d:'100 days of discipline.'},
-  {day:101,t:'🏆 CHALLENGE COMPLETE!',d:'101 days. UNSTOPPABLE.'}
-];
+function generateMilestones(duration) {
+  const stones = [
+    {day:1,t:'Day 1 — The Beginning',d:'You started! The hardest part is done.'}
+  ];
+  if(duration >= 7) stones.push({day:7,t:'Week 1 Complete',d:'First week survived. Habits forming.'});
+  if(duration >= 21) stones.push({day:21,t:'21 Days — Habit Forming',d:'Science says 21 days forms habits.'});
+  
+  const p25 = Math.round(duration * 0.25);
+  if(p25 > 21) stones.push({day:p25,t:'25% Complete',d:'You are a quarter of the way there!'});
+  
+  const p50 = Math.round(duration * 0.50);
+  if(p50 > p25) stones.push({day:p50,t:'Halfway Hero',d:'Past the halfway mark.'});
+  
+  const p75 = Math.round(duration * 0.75);
+  if(p75 > p50) stones.push({day:p75,t:'75% Complete',d:'Home stretch! Keep pushing.'});
+  
+  stones.push({day:duration,t:'🏆 CHALLENGE COMPLETE!',d:duration+' days. UNSTOPPABLE.'});
+  
+  // Sort and deduplicate
+  return stones.sort((a,b)=>a.day-b.day).filter((v,i,a)=>a.findIndex(t=>(t.day===v.day))===i);
+}
 
 // ── State ──
 let curDate = todayStr();
@@ -77,7 +85,7 @@ let activeChallenge = null;
 // ── Cloud Sync ──
 let syncTimeout = null;
 function triggerSync() {
-  if (sessionStorage.getItem('lc_cloud_auth') !== '1') return;
+  if (localStorage.getItem('lc_cloud_auth') !== '1') return;
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
     if (window.GitHubAPI && GitHubAPI.isConfigured()) {

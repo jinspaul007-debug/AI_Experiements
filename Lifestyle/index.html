@@ -265,7 +265,13 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 
 <!-- PAGE: CHALLENGES -->
 <div class="pg" id="pgChallenge">
-  <div id="challengeContent"></div>
+  <div class="cd">
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:12px" id="chActionBtns" style="display:none">
+      <button class="btn btn-o btn-s" onclick="showExtendChallengeMo()">⏱️ Extend</button>
+      <button class="btn btn-o btn-s" onclick="showEditHabitsMo()">📝 Edit Habits</button>
+    </div>
+    <div id="challengeContent"></div>
+  </div>
 </div>
 
 <!-- PAGE: ANALYTICS -->
@@ -362,8 +368,25 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 <!-- PAGE: TIMETABLE -->
 <div class="pg" id="pgTimetable">
   <div class="cd">
-    <div class="ct">📅 Daily Timetable</div>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:10px">Plan your daily routine. Add time blocks to schedule your perfect day.</p>
+    <div class="ct" style="justify-content:space-between">
+      <span>📅 Daily Timetable</span>
+      <select class="hin" id="ttDaySel" style="width:110px;font-size:13px" onchange="renderTimetable()">
+        <option value="All">All Days</option>
+        <option value="Sun">Sunday</option>
+        <option value="Mon" selected>Monday</option>
+        <option value="Tue">Tuesday</option>
+        <option value="Wed">Wednesday</option>
+        <option value="Thu">Thursday</option>
+        <option value="Fri">Friday</option>
+        <option value="Sat">Saturday</option>
+      </select>
+    </div>
+    
+    <div style="display:flex;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:10px">
+      <button class="btn btn-p btn-s" style="flex:1" id="btnTabSched" onclick="setTtTab('schedule')">⏰ Schedule</button>
+      <button class="btn btn-o btn-s" style="flex:1" id="btnTabPlan" onclick="setTtTab('todo')">✅ Planner</button>
+    </div>
+
     <div id="timetableList"></div>
     <div style="display:flex;gap:6px;margin-top:12px">
       <input type="time" class="hin" id="ttTime" style="width:105px">
@@ -400,20 +423,13 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     <button class="pinkey" onclick="pinPress('7')">7</button><button class="pinkey" onclick="pinPress('8')">8</button><button class="pinkey" onclick="pinPress('9')">9</button>
     <button class="pinkey" style="visibility:hidden"></button><button class="pinkey" onclick="pinPress('0')">0</button><button class="pinkey" onclick="pinDel()">⌫</button>
   </div>
-  <button class="btn btn-o btn-s" style="margin-top:18px" onclick="pinForgot()">Forgot PIN?</button>
-</div>
-
-<!-- CLOUD LOGIN OVERLAY -->
-<div class="lock show" id="cloudLogin" style="background:var(--bg);z-index:400">
-  <div class="cd" style="max-width:320px;width:100%;text-align:center">
-    <h2 style="margin-bottom:6px">Cloud Login</h2>
-    <p class="muted" style="margin-bottom:16px">Enter your username and master password to sync your encrypted data.</p>
-    <input type="text" id="clUser" class="hin wfull" placeholder="Username" style="margin-bottom:10px" autocomplete="off">
-    <input type="password" id="clPass" class="hin wfull" placeholder="Password" style="margin-bottom:16px">
-    <button class="btn btn-p btn-bl" onclick="cloudLoginBtn()" id="clBtn">Login & Sync</button>
-    <button class="btn btn-o btn-bl" onclick="showCloudConfig()" style="margin-top:10px;font-size:12px">⚙️ GitHub Config</button>
+  <div style="display:flex;gap:12px;margin-top:18px">
+    <button class="btn btn-o btn-s" onclick="pinForgot()">Forgot PIN?</button>
+    <button class="btn btn-o btn-s" onclick="showCloudConfig()">⚙️ Sync Config</button>
   </div>
 </div>
+
+
 
 <!-- CLOUD CONFIG MODAL -->
 <div class="mov" id="cloudConfigMo">

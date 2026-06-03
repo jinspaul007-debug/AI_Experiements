@@ -2928,8 +2928,356 @@ function exportPantryCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// DOMContentLoaded — Safe initialization after DOM is ready
+// GITHUB CLOUD SYNC ENGINE — Previously missing, causing 100% data loss
 // ═══════════════════════════════════════════════════════════
+
+// --- GitHub API wrapper (same pattern as MoneyWise) ---
+const GitHubSync = {
+  _headers(pat) {
+    return {
+      'Authorization': `Bearer ${pat}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+  },
+  sha: null,
+
+  async fetchData(pat, username, repo, path) {
+    const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}?t=${Date.now()}`;
+    const res = await fetch(url, { headers: this._headers(pat), cache: 'no-store' });
+    if (!res.ok) {
+      if (res.status === 404) return null; // File doesn't exist yet
+      if (res.status === 401 || res.status === 403) throw new Error('Access denied. Check your PAT token.');
+      throw new Error(`GitHub API Error: ${res.status}`);
+    }
+    const data = await res.json();
+    this.sha = data.sha;
+    return data;
+  },
+
+  async pushData(pat, username, repo, path, content, message) {
+    const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
+    const body = { message: message || `MenuPlanner sync ${new Date().toLocaleString('en-IN')}`, content: btoa(unescape(encodeURIComponent(content))) };
+    if (this.sha) body.sha = this.sha;
+    const res = await fetch(url, { method: 'PUT', headers: this._headers(pat), body: JSON.stringify(body), cache: 'no-store' });
+    if (!res.ok) {
+      if (res.status === 409) {
+        // SHA conflict — fetch fresh SHA and retry once
+        const fresh = await this.fetchData(pat, username, repo, path);
+        if (fresh) { this.sha = fresh.sha; body.sha = fresh.sha; }
+        const retry = await fetch(url, { method: 'PUT', headers: this._headers(pat), body: JSON.stringify(body), cache: 'no-store' });
+        if (!retry.ok) throw new Error(`Sync conflict (${retry.status}). Try again.`);
+        const rd = await retry.json();
+        if (rd && rd.content) this.sha = rd.content.sha;
+        return true;
+      }
+      throw new Error(`GitHub push failed: ${res.status}`);
+    }
+    const rd = await res.json();
+    if (rd && rd.content) this.sha = rd.content.sha;
+    return true;
+  }
+};
+
+// --- Export all mp_ localStorage keys as a single JSON backup ---
+function exportAllMpData() {
+  const dump = { app: 'MenuPlanner', version: '1.5', exportDate: new Date().toISOString(), keys: {} };
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('mp_')) dump.keys[k] = localStorage.getItem(k);
+  }
+  return dump;
+}
+
+// --- Import all mp_ keys from backup (merge/overwrite) ---
+function importAllMpData(dump) {
+  if (!dump || !dump.keys) return false;
+  Object.keys(dump.keys).forEach(k => {
+    if (k.startsWith('mp_')) localStorage.setItem(k, dump.keys[k]);
+  });
+  return true;
+}
+
+// --- Get sync config from localStorage ---
+function getSyncConfig() {
+  return getStorage('sync_settings', { pat: '', username: '', repo: '', path: 'MenuPlanner/data.enc' });
+}
+
+// --- Save sync settings and test connection ---
+function saveSyncSettings() {
+  const pat = document.getElementById('syncPat').value.trim();
+  const username = document.getElementById('syncUsername').value.trim();
+  const repo = document.getElementById('syncRepo').value.trim();
+
+  if (!pat || !username || !repo) {
+    toast('⚠️ All GitHub fields are required');
+    return;
+  }
+
+  setStorage('sync_settings', { pat, username, repo, path: 'MenuPlanner/data.enc' });
+  updateSyncStatusUI();
+  toast('✅ GitHub config saved! Pushing data...');
+  pushToCloud(false);
+}
+
+// --- Debounced auto-sync (2 second delay after last write) ---
+let _mpSyncTimer = null;
+function triggerAutoSync() {
+  const config = getSyncConfig();
+  if (!config.pat || !config.username || !config.repo) return; // Not configured
+  clearTimeout(_mpSyncTimer);
+  _mpSyncTimer = setTimeout(async () => {
+    try {
+      const dump = exportAllMpData();
+      const encrypted = CryptoJS.AES.encrypt(JSON.stringify(dump), config.pat).toString();
+      await GitHubSync.pushData(config.pat, config.username, config.repo, config.path, encrypted);
+      console.log('[MenuPlanner] Auto-synced to GitHub');
+    } catch (e) {
+      console.error('[MenuPlanner] Auto-sync failed:', e);
+    }
+  }, 2000);
+}
+
+// --- Push all data to GitHub (manual or auto) ---
+async function pushToCloud(silent) {
+  const config = getSyncConfig();
+  if (!config.pat || !config.username || !config.repo) {
+    if (!silent) toast('⚠️ Configure GitHub sync in Settings first');
+    return;
+  }
+
+  const statusEl = document.getElementById('syncStatus');
+  if (!silent && statusEl) statusEl.textContent = 'Pushing...';
+
+  try {
+    const dump = exportAllMpData();
+    const encrypted = CryptoJS.AES.encrypt(JSON.stringify(dump), config.pat).toString();
+    await GitHubSync.pushData(config.pat, config.username, config.repo, config.path, encrypted);
+    if (!silent) toast('✅ Data pushed to GitHub!');
+    if (statusEl) { statusEl.textContent = '✅ Synced'; statusEl.className = 'sync-status synced'; }
+  } catch (e) {
+    if (!silent) toast('❌ Push failed: ' + e.message);
+    if (statusEl) { statusEl.textContent = '❌ Failed'; statusEl.className = 'sync-status error'; }
+    console.error('Push error:', e);
+  }
+}
+
+// --- Pull all data from GitHub ---
+async function pullFromCloud(silent) {
+  const config = getSyncConfig();
+  if (!config.pat || !config.username || !config.repo) {
+    if (!silent) toast('⚠️ Configure GitHub sync in Settings first');
+    return;
+  }
+
+  const statusEl = document.getElementById('syncStatus');
+  if (!silent && statusEl) statusEl.textContent = 'Pulling...';
+
+  try {
+    const result = await GitHubSync.fetchData(config.pat, config.username, config.repo, config.path);
+    if (!result) {
+      if (!silent) toast('ℹ️ No cloud data found. Will create on next push.');
+      if (statusEl) { statusEl.textContent = 'No cloud data'; statusEl.className = 'sync-status'; }
+      // Auto-push current data as initial seed
+      await pushToCloud(true);
+      return;
+    }
+
+    // Decrypt
+    const rawContent = result.content.replace(/\n/g, '');
+    const encryptedContent = decodeURIComponent(escape(atob(rawContent)));
+    const bytes = CryptoJS.AES.decrypt(encryptedContent, config.pat);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    if (!decrypted) throw new Error('Decryption failed — PAT may have changed.');
+    
+    const dump = JSON.parse(decrypted);
+    if (dump.app !== 'MenuPlanner') throw new Error('Not a valid MenuPlanner backup.');
+
+    importAllMpData(dump);
+    if (!silent) {
+      toast('✅ Data pulled from GitHub!');
+      // Refresh current view
+      initPlanner();
+    }
+    if (statusEl) { statusEl.textContent = '✅ Synced'; statusEl.className = 'sync-status synced'; }
+  } catch (e) {
+    if (!silent) toast('❌ Pull failed: ' + e.message);
+    if (statusEl) { statusEl.textContent = '❌ Failed'; statusEl.className = 'sync-status error'; }
+    console.error('Pull error:', e);
+  }
+}
+
+// --- Alias for header sync button ---
+function syncData() {
+  const btn = document.getElementById('headerSyncBtn');
+  if (btn) btn.classList.add('spinning');
+  pushToCloud(false).then(() => {
+    if (btn) setTimeout(() => btn.classList.remove('spinning'), 500);
+  });
+}
+
+// --- Show/hide sync buttons based on config ---
+function updateSyncStatusUI() {
+  const config = getSyncConfig();
+  const isLinked = !!(config.pat && config.username && config.repo);
+  
+  // Show header sync button
+  const headerBtn = document.getElementById('headerSyncBtn');
+  if (headerBtn) headerBtn.style.display = isLinked ? 'flex' : 'none';
+  
+  // Show "Save to Cloud" buttons throughout app
+  document.querySelectorAll('.sync-req-btn').forEach(btn => {
+    btn.style.display = isLinked ? 'inline-flex' : 'none';
+  });
+
+  // Update status indicator
+  const statusEl = document.getElementById('syncStatus');
+  if (statusEl) {
+    statusEl.textContent = isLinked ? '✅ Linked' : 'Not Linked';
+    statusEl.className = isLinked ? 'sync-status synced' : 'sync-status';
+  }
+}
+
+// --- Populate Settings page fields ---
+function refreshSettingsPage() {
+  const config = getSyncConfig();
+  const patEl = document.getElementById('syncPat');
+  const userEl = document.getElementById('syncUsername');
+  const repoEl = document.getElementById('syncRepo');
+  if (patEl) patEl.value = config.pat || '';
+  if (userEl) userEl.value = config.username || '';
+  if (repoEl) repoEl.value = config.repo || '';
+
+  updateSyncStatusUI();
+
+  // Populate member list
+  const memberList = document.getElementById('memberList');
+  if (memberList) {
+    const users = getStorage('users', DEFAULT_USERS);
+    memberList.innerHTML = '';
+    users.forEach(u => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span><strong>${esc(u.name)}</strong> <span style="opacity:0.6">(${esc(u.role)})</span></span>`;
+      if (curUser && curUser.role === 'admin' && u.id !== curUser.id) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-no btn-s';
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = () => removeFamilyMember(u.id);
+        li.appendChild(delBtn);
+      }
+      memberList.appendChild(li);
+    });
+  }
+
+  // Role-based access: hide write areas for viewers
+  const settingsWriteArea = document.getElementById('settingsMemberWriteArea');
+  const settingsResetBtn = document.getElementById('settingsResetBtn');
+  if (curUser && curUser.role === 'viewer') {
+    if (settingsWriteArea) settingsWriteArea.style.display = 'none';
+    if (settingsResetBtn) settingsResetBtn.style.display = 'none';
+  }
+}
+
+// --- Family member management ---
+function addFamilyMember() {
+  const nameEl = document.getElementById('newUserName');
+  const roleEl = document.getElementById('newUserRole');
+  const name = nameEl ? nameEl.value.trim() : '';
+  const role = roleEl ? roleEl.value : 'editor';
+
+  if (!name) { toast('⚠️ Enter a name'); return; }
+
+  const users = getStorage('users', DEFAULT_USERS);
+  const id = name.toLowerCase().replace(/\s/g, '');
+  if (users.find(u => u.id === id)) { toast('⚠️ Member already exists'); return; }
+
+  users.push({ id, name, role, pass: id + '123' });
+  setStorage('users', users);
+  triggerAutoSync();
+  if (nameEl) nameEl.value = '';
+  refreshSettingsPage();
+  toast(`✅ ${esc(name)} added (password: ${id}123)`);
+}
+
+function removeFamilyMember(id) {
+  showConfirm('Remove Member', 'Remove this family member?', () => {
+    let users = getStorage('users', DEFAULT_USERS);
+    users = users.filter(u => u.id !== id);
+    setStorage('users', users);
+    triggerAutoSync();
+    refreshSettingsPage();
+    toast('🗑️ Member removed');
+  });
+}
+
+// --- Password change ---
+function changeUserPassword() {
+  const oldPass = document.getElementById('oldPass').value;
+  const newPass = document.getElementById('newPass').value;
+  if (!oldPass || !newPass) { toast('⚠️ Fill in both fields'); return; }
+  if (newPass.length < 4) { toast('⚠️ Password must be at least 4 characters'); return; }
+
+  const users = getStorage('users', DEFAULT_USERS);
+  const user = users.find(u => u.id === curUser.id);
+  if (!user || user.pass !== oldPass) { toast('❌ Current password is incorrect'); return; }
+
+  user.pass = newPass;
+  setStorage('users', users);
+  triggerAutoSync();
+  curUser.pass = newPass;
+  document.getElementById('oldPass').value = '';
+  document.getElementById('newPass').value = '';
+  toast('✅ Password changed!');
+}
+
+// --- Data import/export (JSON file) ---
+function exportDataJSON() {
+  const dump = exportAllMpData();
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'MenuPlanner_backup_' + getLocalDateString(new Date()) + '.json';
+  a.click();
+  toast('📥 Backup exported');
+}
+
+function importDataJSON(ev) {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = function(e) {
+    try {
+      const dump = JSON.parse(e.target.result);
+      if (dump.app !== 'MenuPlanner') { toast('❌ Not a MenuPlanner backup'); return; }
+      showConfirm('Restore Backup?', 'This will overwrite all current data. Continue?', () => {
+        importAllMpData(dump);
+        toast('✅ Backup restored!');
+        triggerAutoSync();
+        setTimeout(() => location.reload(), 500);
+      });
+    } catch (err) { toast('❌ Invalid file: ' + err.message); }
+  };
+  r.readAsText(f);
+  ev.target.value = '';
+}
+
+// --- Reset all data ---
+function confirmResetAll() {
+  showConfirm('Reset Everything', 'This will DELETE all plans, dishes, pantry, and settings. This cannot be undone!', () => {
+    // Remove all mp_ keys
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('mp_')) keysToRemove.push(k);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    toast('🗑️ All data reset');
+    setTimeout(() => location.reload(), 500);
+  });
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize week key
   curWeekKey = getWeekKey(new Date());
