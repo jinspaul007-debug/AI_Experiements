@@ -3,7 +3,7 @@
    Offline caching for PWA support
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'life101-v5';
+const CACHE_NAME = 'life101-v6';
 const ASSETS = [
   './',
   './index.html',

@@ -10,19 +10,19 @@ function HNAMES() { const m={}; getActiveHabits().forEach(h=>{m[h.id]=h.name;});
 
 const DAILY_QUOTES = [
   {en: "True transformation requires consistent dedication. Every small choice you make today builds the foundation of the life you want tomorrow. Don't look for immediate results; trust the process, stay disciplined, and eventually you will become unstoppable.", 
-   ml: "നിങ്ങളുടെ ഉള്ളിലെ തീ കെടാതെ സൂക്ഷിക്കുക. ഓരോ ദിവസവും ഒരു പുതിയ തുടക്കമാണ്. മാറ്റങ്ങൾ പെട്ടെന്ന് സംഭവിക്കില്ലെങ്കിലും, നിങ്ങളുടെ നിരന്തരമായ പ്രയത്നം ഒരു നാൾ വലിയ വിജയമായി മാറും."},
+   ml: "പ്രയത്നിക്കാൻ തയ്യാറാണെങ്കിൽ നേടാൻ കഴിയാത്തതായി ഒന്നുമില്ല. ഓരോ ചെറിയ കാൽവെപ്പും വലിയ വിജയത്തിലേക്കുള്ള ചവിട്ടുപടിയാണ്."},
   
   {en: "Your mind is a powerful thing. When you fill it with positive thoughts and focus entirely on your goals, your life will start to change. Push through the discomfort, because the pain of discipline is far less than the pain of regret.", 
-   ml: "സ്വപ്നങ്ങൾ യാഥാർത്ഥ്യമാകണമെങ്കിൽ ഉറച്ച തീരുമാനങ്ങൾ എടുക്കണം. മറ്റുള്ളവർ എന്ത് വിചാരിക്കും എന്ന് ചിന്തിക്കാതെ നിങ്ങളുടെ ലക്ഷ്യത്തിലേക്ക് മുന്നേറുക."},
+   ml: "മനസ്സാണ് ഏറ്റവും വലിയ ശക്തി. പോസിറ്റീവായ ചിന്തകളോടെ മുന്നേറുക, ലക്ഷ്യങ്ങൾ താനെ വഴങ്ങും."},
   
   {en: "There will be days when you feel like giving up, when the progress seems invisible. Remember why you started in the first place. You are stronger than your excuses. Show up for yourself, even when it's hard.", 
-   ml: "ശരീരത്തിനും മനസ്സിനും ഒരുപോലെ കരുത്ത് നൽകേണ്ടത് അത്യാവശ്യമാണ്. ആരോഗ്യകരമായ ശീലങ്ങൾ വളർത്തിയെടുക്കുന്നത് ഒരു ദിവസത്തെ കാര്യമല്ല, അത് ഒരു ജീവിതചര്യയാണ്."},
+   ml: "വീഴുന്നതല്ല പരാജയം, വീണിടത്ത് നിന്ന് എഴുന്നേൽക്കാതിരിക്കുന്നതാണ് യഥാർത്ഥ പരാജയം. നിശ്ചയദാർഢ്യത്തോടെ മുന്നോട്ട് പോവുക."},
   
   {en: "Success is not a big step in the future, it is a small step taken right now. By mastering your morning routines, tracking your progress, and taking control of your daily habits, you master your destiny.", 
-   ml: "പരാജയങ്ങളെ ഭയപ്പെടാതിരിക്കുക, അവ വിജയത്തിലേക്കുള്ള പാഠങ്ങളാണ്. ഒരു തവണ വീണാൽ അടുത്ത തവണ കൂടുതൽ കരുത്തോടെ എഴുന്നേൽക്കുക."},
+   ml: "നാളെയെക്കുറിച്ചുള്ള സ്വപ്നങ്ങളല്ല, ഇന്നത്തെ കഠിനാധ്വാനമാണ് വിജയത്തിന്റെ അടിസ്ഥാനം. ദിനചര്യകൾ കൃത്യമാക്കൂ, ജീവിതം മാറും."},
   
   {en: "Motivation gets you going, but discipline keeps you growing. Set your standards high, embrace the grind, and refuse to settle for mediocrity. The best version of yourself is waiting on the other side of consistency.", 
-   ml: "സ്വയം വിശ്വസിക്കുക, അതാണ് വിജയത്തിന്റെ ആദ്യപടി. നിങ്ങളുടെ കഴിവുകളിൽ സംശയം തോന്നുന്ന നിമിഷങ്ങളിൽ, നിങ്ങൾ ഇതുവരെ താണ്ടിയ ദൂരത്തെക്കുറിച്ച് ഓർക്കുക."}
+   ml: "തുടങ്ങാൻ ആവേശവും, തുടരാൻ അച്ചടക്കവും വേണം. വിട്ടുവീഴ്ചകളില്ലാതെ പരിശ്രമിക്കുക, വിജയം സുനിശ്ചിതം."}
 ];
 
 // ── Page Navigation ──
@@ -275,6 +275,12 @@ function delDay() {
 function refreshDash() {
   const s=getS(), ad=allD(), t=todayStr();
   const dn=Math.max(1,diffD(s.startDate,t)+1), cap=Math.min(dn,s.duration);
+  
+  const bdgT = document.getElementById('bdgT');
+  if(bdgT && activeChallenge) {
+    const chEmoji = (CHALLENGE_TYPES[activeChallenge.type]||{emoji:'🔥'}).emoji;
+    bdgT.textContent = `${chEmoji} ${activeChallenge.name} • Day ${cap} of ${s.duration}`;
+  }
 
   // Live Clock & Date
   if(CI.clockInt) clearInterval(CI.clockInt);
@@ -406,6 +412,13 @@ function refreshDash() {
     el.innerHTML='<div class="mi-t">'+m.t+'</div><div class="mi-d">'+m.d+(cap>=m.day?' ✅':'')+'</div>';
     ml.appendChild(el);
   });
+  
+  if (diffD(s.startDate, t) + 1 > s.duration) {
+    const extCard = document.createElement('div');
+    extCard.style = 'margin-top:16px;padding:16px;background:rgba(59,130,246,.1);border:1px dashed var(--ac);border-radius:12px;text-align:center';
+    extCard.innerHTML = '<h3 style="color:var(--ac);margin-bottom:6px">🎉 Challenge Completed!</h3><p style="font-size:13px;color:var(--t2);margin-bottom:12px">You have reached the end of your set challenge days. Do you want to keep going and build an even longer streak?</p><button class="btn btn-p" onclick="showExtendChallengeMo()">⏱️ Extend Challenge</button>';
+    ml.appendChild(extCard);
+  }
 
   renderDashGoals(ad);
 }
@@ -617,7 +630,8 @@ function renderProfilePage() {
   });
   html += '</div>';
   html += '<input type="text" class="hin" id="newProfName" placeholder="Enter name" style="width:100%;text-align:left;padding:10px;margin-bottom:10px">';
-  html += '<button class="btn btn-p btn-bl" onclick="doCreateProfile()">🚀 Create Profile</button></div>';
+  html += '<input type="password" class="hin" id="newProfPin" placeholder="Create 4-digit PIN" maxlength="4" style="width:100%;text-align:left;padding:10px;margin-bottom:10px">';
+  html += '<button class="btn btn-p btn-bl" onclick="doCreateProfile()">🚀 Continue to Health Setup</button></div>';
   el.innerHTML = html;
 }
 function pickAvatar(el) {
@@ -626,10 +640,13 @@ function pickAvatar(el) {
 }
 function doCreateProfile() {
   const name = document.getElementById('newProfName').value.trim();
+  const pin = document.getElementById('newProfPin').value.trim();
   if(!name) { toast('⚠️ Enter a name'); return; }
+  if(!pin || pin.length !== 4 || isNaN(pin)) { toast('⚠️ Enter a 4-digit PIN'); return; }
   const avEl = document.querySelector('#avatarPick span[style*="opacity: 1"]')||document.querySelector('#avatarPick span[style*="opacity:1"]');
   const avatar = avEl ? avEl.dataset.av : '🦊';
   createProfile(name, avatar);
+  setPin(pin);
   toast('✅ Profile created: '+name);
   showPg('pgTools'); // Go to Health Tools next
 }
@@ -1181,69 +1198,7 @@ function saveCloudConfig() {
   GitHubAPI.saveConfig(token, user, repo);
   document.getElementById('cloudConfigMo').classList.remove('show');
   toast('✅ GitHub Config Saved');
-  initCloudAuth();
-}
 
-async function cloudLoginBtn() {
-  if(!GitHubAPI.isConfigured()) { toast('⚠️ Configure GitHub first'); return; }
-  const clBtn = document.getElementById('clBtn');
-  const user = document.getElementById('clUser').value.trim();
-  const pass = document.getElementById('clPass').value.trim();
-  if(!user || !pass) { toast('⚠️ Enter username and password'); return; }
-  
-  clBtn.textContent = 'Syncing...';
-  clBtn.disabled = true;
-  
-  try {
-    GitHubAPI.setPath('Lifestyle/data_' + user + '.enc');
-    GitHubAPI.setEncryptionKey(pass);
-    
-    const data = await GitHubAPI.fetchData();
-    if(data) {
-      // Clear existing localStorage
-      localStorage.clear();
-      GitHubAPI.saveConfig(GitHubAPI.config.token, GitHubAPI.config.username, GitHubAPI.config.repo);
-      GitHubAPI.setPath('Lifestyle/data_' + user + '.enc');
-      // Import the full backup
-      importFullBackup(data);
-      toast('✅ Cloud data synced and decrypted!');
-    } else {
-      // New user
-      localStorage.clear();
-      GitHubAPI.saveConfig(GitHubAPI.config.token, GitHubAPI.config.username, GitHubAPI.config.repo);
-      GitHubAPI.setPath('Lifestyle/data_' + user + '.enc');
-      createProfile(user, '🌟');
-      await GitHubAPI.pushData(exportFullBackup());
-      toast('✅ New cloud profile created!');
-    }
-    
-    // Successfully authenticated
-    localStorage.setItem('lc_cloud_auth', '1');
-    document.getElementById('cloudLogin').classList.remove('show');
-    init();
-    
-  } catch(err) {
-    toast('❌ ' + err.message);
-  } finally {
-    clBtn.textContent = 'Login & Sync';
-    clBtn.disabled = false;
-  }
-}
-
-function cloudLogout() {
-  openMo('Logout?', 'This will clear local device data and return to login screen. Ensure you are synced!', () => {
-    localStorage.removeItem('lc_cloud_auth');
-    localStorage.clear();
-    GitHubAPI.saveConfig(GitHubAPI.config.token, GitHubAPI.config.username, GitHubAPI.config.repo);
-    location.reload();
-  });
-}
-
-function initCloudAuth() {
-  if(localStorage.getItem('lc_cloud_auth') === '1') return true;
-  document.getElementById('cloudLogin').classList.add('show');
-  return false;
-}
 
 // ── Init ──
 function init() {
@@ -1528,6 +1483,72 @@ function refreshAna() {
       type:'line', data:{ labels:cL, datasets:calDatasets}, options:cOpt('kcal')
     });
   }
+}
+
+// ── Extend Challenge ──
+function showExtendChallengeMo() {
+  document.getElementById('extendChallengeMo').classList.add('show');
+}
+function doExtendChallenge() {
+  const days = parseInt(document.getElementById('extDays').value);
+  if(!days || days < 1) { toast('⚠️ Enter valid days'); return; }
+  const s = getS();
+  s.duration += days;
+  setS(s);
+  if (activeChallenge) {
+    const chs = getChallenges();
+    const ch = chs.find(c => c.id === activeChallenge.id);
+    if(ch) { ch.duration = s.duration; setChallenges(chs); activeChallenge = ch; }
+  }
+  document.getElementById('extendChallengeMo').classList.remove('show');
+  toast(`✅ Extended by ${days} days!`);
+  refreshDash();
+}
+
+// ── Edit Active Habits ──
+function showEditHabitsMo() {
+  const el = document.getElementById('editHabitsList');
+  if(!el || !activeChallenge) return;
+  const currentHabits = activeChallenge.habits || [];
+  let html = '';
+  
+  Object.keys(HABIT_GROUPS).forEach(gk => {
+    const gInfo = HABIT_GROUPS[gk];
+    const groupHabits = DEFAULT_HABITS.filter(h => (h.group||'custom') === gk);
+    if(groupHabits.length > 0) {
+      html += `<div style="font-weight:700;margin-top:10px;margin-bottom:6px">${gInfo.label}</div>`;
+      groupHabits.forEach(h => {
+        const isChecked = currentHabits.includes(h.id);
+        html += `<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer">
+          <input type="checkbox" value="${h.id}" class="edit-habit-cb" ${isChecked ? 'checked' : ''}>
+          <span>${h.emoji} ${h.name}</span>
+        </label>`;
+      });
+    }
+  });
+  
+  el.innerHTML = html;
+  document.getElementById('editHabitsMo').classList.add('show');
+}
+
+function doSaveHabits() {
+  if(!activeChallenge) return;
+  const cbs = document.querySelectorAll('.edit-habit-cb:checked');
+  const newHabits = Array.from(cbs).map(cb => cb.value);
+  if(newHabits.length === 0) { toast('⚠️ Select at least one habit'); return; }
+  
+  const chs = getChallenges();
+  const ch = chs.find(c => c.id === activeChallenge.id);
+  if(ch) { 
+    ch.habits = newHabits; 
+    setChallenges(chs); 
+    activeChallenge = ch; 
+  }
+  
+  document.getElementById('editHabitsMo').classList.remove('show');
+  toast('✅ Habits updated!');
+  buildTrackerForm();
+  loadForm(curDate);
 }
 
 document.addEventListener('DOMContentLoaded', init);

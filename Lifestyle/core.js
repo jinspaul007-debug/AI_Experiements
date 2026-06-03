@@ -179,22 +179,45 @@ function updatePrivacy(field, value) {
   setProfiles(profiles);
 }
 
+// ── AES Encryption Wrappers ──
+function lsGetE(key) {
+  const raw = localStorage.getItem(key);
+  if(!raw) return null;
+  if(raw.startsWith('ENC:')) {
+    if(!activeUser || !activeUser.pinHash) return null;
+    try {
+      const dec = CryptoJS.AES.decrypt(raw.substring(4), activeUser.pinHash).toString(CryptoJS.enc.Utf8);
+      return JSON.parse(dec);
+    } catch(e) { console.error('Decryption failed for', key); return null; }
+  }
+  try { return JSON.parse(raw); } catch(e) { return null; }
+}
+function lsSetE(key, val) {
+  const str = JSON.stringify(val);
+  if(activeUser && activeUser.pinHash) {
+    const enc = 'ENC:' + CryptoJS.AES.encrypt(str, activeUser.pinHash).toString();
+    localStorage.setItem(key, enc);
+  } else {
+    localStorage.setItem(key, str);
+  }
+}
+
 // ── User-Scoped Storage ──
 function getS() {
   if(!activeUser) return {duration:101,startDate:todayStr(),theme:'dark',cheatDPW:1,restDPW:1,tgtW:75,watT:3.5,proT:120,calT:2000,sleepT:7,stepsT:10000};
-  return JSON.parse(localStorage.getItem('lc_s_'+activeUser.id)||JSON.stringify({
-    duration:101,startDate:todayStr(),theme:'dark',cheatDPW:1,restDPW:1,tgtW:75,watT:3.5,proT:120,calT:2000,sleepT:7,stepsT:10000
-  }));
+  const s = lsGetE('lc_s_'+activeUser.id);
+  if(s) return s;
+  return {duration:101,startDate:todayStr(),theme:'dark',cheatDPW:1,restDPW:1,tgtW:75,watT:3.5,proT:120,calT:2000,sleepT:7,stepsT:10000};
 }
-function setS(s) { if(activeUser) { localStorage.setItem('lc_s_'+activeUser.id,JSON.stringify(s)); triggerSync(); } }
-function getDD(ds) { if(!activeUser) return {}; const a=JSON.parse(localStorage.getItem('lc_d_'+activeUser.id)||'{}'); return a[ds]||{}; }
-function setDD(ds,d) { if(!activeUser) return; const a=JSON.parse(localStorage.getItem('lc_d_'+activeUser.id)||'{}'); a[ds]=d; localStorage.setItem('lc_d_'+activeUser.id,JSON.stringify(a)); triggerSync(); }
-function allD() { if(!activeUser) return {}; return JSON.parse(localStorage.getItem('lc_d_'+activeUser.id)||'{}'); }
-function deleteDD(ds) { if(!activeUser) return; const a=JSON.parse(localStorage.getItem('lc_d_'+activeUser.id)||'{}'); delete a[ds]; localStorage.setItem('lc_d_'+activeUser.id,JSON.stringify(a)); triggerSync(); }
+function setS(s) { if(activeUser) { lsSetE('lc_s_'+activeUser.id, s); triggerSync(); } }
+function getDD(ds) { if(!activeUser) return {}; const a=lsGetE('lc_d_'+activeUser.id)||{}; return a[ds]||{}; }
+function setDD(ds,d) { if(!activeUser) return; const a=lsGetE('lc_d_'+activeUser.id)||{}; a[ds]=d; lsSetE('lc_d_'+activeUser.id, a); triggerSync(); }
+function allD() { if(!activeUser) return {}; return lsGetE('lc_d_'+activeUser.id)||{}; }
+function deleteDD(ds) { if(!activeUser) return; const a=lsGetE('lc_d_'+activeUser.id)||{}; delete a[ds]; lsSetE('lc_d_'+activeUser.id, a); triggerSync(); }
 
 // ── Challenge Storage ──
-function getChallenges() { if(!activeUser) return []; return JSON.parse(localStorage.getItem('lc_ch_'+activeUser.id)||'[]'); }
-function setChallenges(chs) { if(activeUser) { localStorage.setItem('lc_ch_'+activeUser.id,JSON.stringify(chs)); triggerSync(); } }
+function getChallenges() { if(!activeUser) return []; return lsGetE('lc_ch_'+activeUser.id)||[]; }
+function setChallenges(chs) { if(activeUser) { lsSetE('lc_ch_'+activeUser.id, chs); triggerSync(); } }
 
 function createNewChallenge(type, name, duration, startDate, customHabits, opts) {
   opts = opts || {};
@@ -243,8 +266,8 @@ function getActiveHabitIds() { return getActiveHabits().map(h=>h.id); }
 // ── Goals (per user) ──
 // Goal shape: { id, type:'water'|'sleep'|'reading'|'steps'|'weight'|'study'|'custom',
 //   label, target, unit, field, startDate, endDate, startValue(for weight), direction:'increase'|'decrease' }
-function getGoals() { if(!activeUser) return []; return JSON.parse(localStorage.getItem('lc_g_'+activeUser.id)||'[]'); }
-function setGoals(g) { if(activeUser) { localStorage.setItem('lc_g_'+activeUser.id,JSON.stringify(g)); triggerSync(); } }
+function getGoals() { if(!activeUser) return []; return lsGetE('lc_g_'+activeUser.id)||[]; }
+function setGoals(g) { if(activeUser) { lsSetE('lc_g_'+activeUser.id, g); triggerSync(); } }
 function addGoal(goal) {
   const g = getGoals();
   goal.id = 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
@@ -272,8 +295,8 @@ function getSharedData() { return JSON.parse(localStorage.getItem('lc_shared')||
 function setSharedData(d) { localStorage.setItem('lc_shared',JSON.stringify(d)); triggerSync(); }
 
 // ── Timetable ──
-function getTimetable() { if(!activeUser) return []; return JSON.parse(localStorage.getItem('lc_tt_'+activeUser.id)||'[]'); }
-function setTimetable(tt) { if(activeUser) { localStorage.setItem('lc_tt_'+activeUser.id,JSON.stringify(tt)); triggerSync(); } }
+function getTimetable() { if(!activeUser) return []; return lsGetE('lc_tt_'+activeUser.id)||[]; }
+function setTimetable(tt) { if(activeUser) { lsSetE('lc_tt_'+activeUser.id, tt); triggerSync(); } }
 
 function exportForSharing() {
   if(!activeUser) return null;

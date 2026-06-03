@@ -260,6 +260,9 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     <div class="cd-d" id="tDate">Today</div>
     <button onclick="chgDate(1)">›</button>
   </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="btn btn-o btn-s" onclick="showEditHabitsMo()">📝 Edit Tracked Habits</button>
+  </div>
   <div id="dForm"></div>
 </div>
 
@@ -441,6 +444,32 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-o btn-s" onclick="document.getElementById('cloudConfigMo').classList.remove('show')">Cancel</button>
       <button class="btn btn-ok btn-s" onclick="saveCloudConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXTEND CHALLENGE MODAL -->
+<div class="mov" id="extendChallengeMo">
+  <div class="mo">
+    <h3>⏱️ Extend Challenge</h3>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Add more days to your current challenge without resetting your streak.</p>
+    <div class="fld" style="margin-bottom:16px"><label>Additional Days</label><input type="number" id="extDays" class="hin" value="30" min="1"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o btn-s" onclick="document.getElementById('extendChallengeMo').classList.remove('show')">Cancel</button>
+      <button class="btn btn-p btn-s" onclick="doExtendChallenge()">Extend</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT HABITS MODAL -->
+<div class="mov" id="editHabitsMo">
+  <div class="mo">
+    <h3>📝 Edit Tracked Habits</h3>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Select the habits you want to track for this challenge.</p>
+    <div id="editHabitsList" style="max-height:60vh;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o btn-s" onclick="document.getElementById('editHabitsMo').classList.remove('show')">Cancel</button>
+      <button class="btn btn-p btn-s" onclick="doSaveHabits()">Save Changes</button>
     </div>
   </div>
 </div>
