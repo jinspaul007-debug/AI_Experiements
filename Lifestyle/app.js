@@ -629,25 +629,36 @@ function renderProfilePage() {
     html += '<span style="font-size:28px;cursor:pointer;opacity:'+(i===0?'1':'0.4')+';padding:4px" onclick="pickAvatar(this)" data-av="'+a+'">'+a+'</span>';
   });
   html += '</div>';
-  html += '<input type="text" class="hin" id="newProfName" placeholder="Enter name" style="width:100%;text-align:left;padding:10px;margin-bottom:10px">';
-  html += '<input type="password" class="hin" id="newProfPin" placeholder="Create 4-digit PIN" maxlength="4" style="width:100%;text-align:left;padding:10px;margin-bottom:10px">';
-  html += '<button class="btn btn-p btn-bl" onclick="doCreateProfile()">🚀 Continue to Health Setup</button></div>';
+  html += '<input type="text" class="hin" id="newProfName" placeholder="Enter your name" style="width:100%;text-align:left;padding:10px;margin-bottom:10px">';
+  html += '<input type="password" class="hin" id="newProfPin" placeholder="Create a 4-digit PIN (required)" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" style="width:100%;text-align:left;padding:10px;margin-bottom:4px">';
+  html += '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">PIN protects your data — required for GitHub cloud sync & multi-device access.</div>';
+  html += '<button class="btn btn-p btn-bl" onclick="doCreateProfile()">🚀 Create Profile & Continue</button></div>';
   el.innerHTML = html;
+  // Mark first avatar as selected by default
+  const firstAv = el.querySelector('#avatarPick span');
+  if(firstAv) firstAv.dataset.selected = '1';
 }
 function pickAvatar(el) {
-  document.querySelectorAll('#avatarPick span').forEach(s=>s.style.opacity='0.4');
+  document.querySelectorAll('#avatarPick span').forEach(s=>{ s.style.opacity='0.4'; delete s.dataset.selected; });
   el.style.opacity='1';
+  el.dataset.selected = '1';
 }
 function doCreateProfile() {
   const name = document.getElementById('newProfName').value.trim();
   const pin = document.getElementById('newProfPin').value.trim();
-  if(!name) { toast('⚠️ Enter a name'); return; }
-  if(!pin || pin.length !== 4 || isNaN(pin)) { toast('⚠️ Enter a 4-digit PIN'); return; }
-  const avEl = document.querySelector('#avatarPick span[style*="opacity: 1"]')||document.querySelector('#avatarPick span[style*="opacity:1"]');
+  if(!name) { toast('⚠️ Enter your name'); return; }
+  if(!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { toast('⚠️ PIN must be exactly 4 digits (e.g. 1234)'); return; }
+  const avEl = document.querySelector('#avatarPick span[data-selected="1"]');
   const avatar = avEl ? avEl.dataset.av : '🦊';
   createProfile(name, avatar);
   setPin(pin);
   toast('✅ Profile created: '+name);
+  // Set cloud path now if GitHub is configured
+  if(GitHubAPI.isConfigured() && activeUser && activeUser.pinHash) {
+    GitHubAPI.setPath('Lifestyle/data_' + activeUser.pinHash + '.enc');
+    GitHubAPI.setEncryptionKey(pin);
+    localStorage.setItem('lc_cloud_auth', '1');
+  }
   showPg('pgTools'); // Go to Health Tools next
 }
 function confirmDelProfile(id) {
@@ -835,28 +846,7 @@ function showExtendChallengeMo() {
   });
 }
 
-function showEditHabitsMo() {
-  if(!activeChallenge) return;
-  const habits = activeChallenge.habits || [];
-  openMo('Edit Habits', 'You can add or remove custom habits mid-challenge.', () => {
-    const val = prompt('Enter habit names separated by commas (e.g. Drink water, Read 10 pages). They will be added to Custom Habits:', '');
-    if(val) {
-      const names = val.split(',').map(n => n.trim()).filter(n => n);
-      names.forEach(n => {
-        const id = 'cust_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-        activeChallenge.customHabitDefs = activeChallenge.customHabitDefs || [];
-        activeChallenge.customHabitDefs.push({id, name:n, emoji:'✏️', group:'custom'});
-        activeChallenge.habits.push(id);
-      });
-      const chs = getChallenges();
-      const ci = chs.findIndex(c => c.id === activeChallenge.id);
-      if(ci>=0) { chs[ci] = activeChallenge; setChallenges(chs); }
-      toast('✅ Added ' + names.length + ' new habits');
-      renderChallenges();
-      closeMo();
-    }
-  });
-}
+// showEditHabitsMo is defined below (the proper modal version)
 
 // ── Comparison Page ──
 function renderCompare() {
@@ -1083,8 +1073,20 @@ async function syncAndLoginWithPin(pin) {
     closeLock();
     proceedInit();
   } else {
-    // Not found locally. Try fetching from Cloud using PIN.
+    // Not found locally — show error if GitHub not configured, otherwise try cloud
     const clBtn = document.getElementById('lockMsg');
+    const profiles = getProfiles();
+    const hasAnyProfile = Object.keys(profiles).length > 0;
+    
+    if (hasAnyProfile && !GitHubAPI.isConfigured()) {
+      // Wrong PIN for existing local profiles
+      clBtn.textContent = '❌ Incorrect PIN. Try again.';
+      clBtn.style.color = 'var(--no)';
+      setTimeout(() => { clBtn.textContent = 'Enter your 4-digit PIN'; clBtn.style.color = ''; }, 1800);
+      pinBuffer = ''; updatePinDots();
+      return;
+    }
+    
     clBtn.textContent = 'Checking Cloud Sync...';
     
     if (GitHubAPI.isConfigured()) {
@@ -1159,7 +1161,12 @@ function pinComplete(){
 
 function pinForgot(){
   if(pinMode==='set'){ closeLock(); return; }
-  alert("If you forgot your PIN, your local encrypted cloud data cannot be decrypted. You can setup a new profile by clearing local storage.");
+  const msg = "If you forgot your PIN:\n\n" +
+    "1. If you have GitHub Cloud Sync configured, enter any 4-digit PIN to try loading from cloud.\n\n" +
+    "2. If you have a JSON backup file, use the '⚙️ Sync Config' button to set up GitHub, OR restore from backup after resetting.\n\n" +
+    "3. To start fresh: Close this dialog, press '⚙️ Sync Config', then clear browser data for this site (Settings → Privacy → Clear Site Data).\n\n" +
+    "Your PIN is: [only you know it — it was never stored in plain text]";
+  alert(msg);
 }
 
 // ═══════════════ FULL BACKUP ═══════════════
@@ -1197,7 +1204,8 @@ function saveCloudConfig() {
   if(!token || !user || !repo) { toast('⚠️ All GitHub fields required'); return; }
   GitHubAPI.saveConfig(token, user, repo);
   document.getElementById('cloudConfigMo').classList.remove('show');
-  toast('✅ GitHub Config Saved');
+  toast('✅ GitHub Config Saved — you will be synced on next login');
+}
 
 
 // ── Init ──
@@ -1205,17 +1213,48 @@ function init() {
   // Migrate v1 data if present
   if(localStorage.getItem('lc_s') || localStorage.getItem('lc_d')) migrateV1Data();
 
-  // Show Master PIN gate automatically
-  pinMode = 'verify'; 
+  const profiles = getProfiles();
+  const profileKeys = Object.keys(profiles);
+
+  // First-time user: no profiles exist yet
+  if(!profileKeys.length) {
+    activeUser = null;
+    showProfileSetup();
+    return;
+  }
+
+  // Try to restore last active user from session (after DOMContentLoaded re-run)
+  const lastId = getActiveUserId();
+  if(lastId && profiles[lastId]) {
+    activeUser = profiles[lastId];
+    loadActiveChallenge();
+    // If user has no PIN, go straight in
+    if(!activeUser.pinHash) {
+      proceedInit();
+      return;
+    }
+  }
+
+  // Show PIN gate (works for any profile with a PIN)
+  pinMode = 'verify';
   pinNewFirst = '';
-  document.getElementById('lockAvatar').textContent = '🔒';
-  document.getElementById('lockName').textContent = 'Welcome Back';
+  // If only one profile and it has a PIN, show that profile's avatar
+  if(profileKeys.length === 1 && profiles[profileKeys[0]].pinHash) {
+    const p = profiles[profileKeys[0]];
+    document.getElementById('lockAvatar').textContent = p.avatar || '🔒';
+    document.getElementById('lockName').textContent = p.name || 'Welcome Back';
+  } else {
+    document.getElementById('lockAvatar').textContent = '🔒';
+    document.getElementById('lockName').textContent = 'Welcome Back';
+  }
   openLock('Enter PIN to access your data');
 }
 
 function proceedInit() {
   if(!activeUser) { showProfileSetup(); return; }
-  if(!getChallenges().length) { showPg('pgChallenge'); return; }
+
+  // Ensure active challenge is loaded
+  loadActiveChallenge();
 
   const s=getS();
   document.body.dataset.theme=s.theme;
@@ -1223,11 +1262,15 @@ function proceedInit() {
   if(themeEl) themeEl.classList.toggle('on',s.theme==='dark');
   curDate=todayStr();
 
-  // Update header
+  // Update header badges
   const bdgT = document.getElementById('bdgT');
-  if(bdgT && activeChallenge) {
-    const ct = CHALLENGE_TYPES[activeChallenge.type]||{emoji:'🌟'};
-    bdgT.textContent = ct.emoji+' '+activeChallenge.name;
+  if(bdgT) {
+    if(activeChallenge) {
+      const ct = CHALLENGE_TYPES[activeChallenge.type]||{emoji:'🌟'};
+      bdgT.textContent = ct.emoji+' '+activeChallenge.name;
+    } else {
+      bdgT.textContent = '🔥 Day 1 of 101';
+    }
   }
   const userBadge = document.getElementById('userBadge');
   if(userBadge) userBadge.textContent = activeUser.avatar+' '+activeUser.name;
@@ -1241,10 +1284,15 @@ function proceedInit() {
     btn.style.cursor = 'pointer';
     btn.textContent = '🚪 Exit';
     btn.onclick = () => location.reload();
-    userBadge.parentNode.appendChild(btn);
+    if(userBadge && userBadge.parentNode) userBadge.parentNode.appendChild(btn);
   }
 
-  // Check if we need to show tools or challenge setup
+  // Auto-sync from GitHub on login if configured
+  if(GitHubAPI.isConfigured() && localStorage.getItem('lc_cloud_auth') === '1') {
+    triggerSync();
+  }
+
+  // Redirect to setup if no challenge configured yet
   if(!getChallenges().length) {
     if(!getBody().startWeight) showPg('pgTools');
     else showPg('pgChallenge');
@@ -1455,35 +1503,7 @@ function saveHealthGoals() {
   else setTimeout(() => showPg('pgDash'), 1000);
 }
 
-// ── Analytics Page ──
-function refreshAna() {
-  const s = getS(), ad = allD();
-  
-  // Calorie chart
-  const cL=[], cC=[], cG=[];
-  Object.keys(ad).sort().forEach(d=>{
-    const dd = ad[d];
-    if(dd.habits && dd.calories) {
-      cL.push('D'+(diffD(s.startDate,d)+1));
-      cC.push(dd.calories);
-      if(s.tgtCal) cG.push(s.tgtCal);
-    }
-  });
-  
-  if(CI.cal) CI.cal.destroy();
-  
-  const calEl = document.getElementById('cCalorie');
-  if (calEl) {
-    const calDatasets = [{label:'Calories Logged',data:cC,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.1)',fill:true,tension:.3}];
-    if(s.tgtCal && cG.length > 0) {
-      calDatasets.push({label:'Calorie Target',data:cG,borderColor:'#22c55e',borderDash:[5,5],borderWidth:2,pointRadius:0,fill:false});
-    }
-    
-    CI.cal = new Chart(calEl, {
-      type:'line', data:{ labels:cL, datasets:calDatasets}, options:cOpt('kcal')
-    });
-  }
-}
+// ── Analytics Page ── (full implementation is in analytics.js)
 
 // ── Extend Challenge ──
 function showExtendChallengeMo() {
