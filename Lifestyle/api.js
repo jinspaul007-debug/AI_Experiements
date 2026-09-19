@@ -74,20 +74,46 @@ const GitHubAPI = {
 
     setEncryptionKey(key) { this.config.encKey = key; },
 
-    isConfigured() {
+    autoDetectConfig() {
+        if (!this.config.username || !this.config.repo) {
+            const hostname = window.location.hostname;
+            const pathname = window.location.pathname;
+            if (hostname.endsWith('.github.io')) {
+                this.config.username = hostname.split('.')[0];
+                const parts = pathname.split('/').filter(p => p);
+                if (parts.length > 0) {
+                    this.config.repo = parts[0];
+                }
+            }
+        }
+    },
+
+    isConfiguredForRead() {
+        this.autoDetectConfig();
+        return !!(this.config.username && this.config.repo);
+    },
+
+    isConfiguredForWrite() {
         return !!(this.config.token && this.config.username && this.config.repo);
+    },
+
+    isConfigured() {
+        return this.isConfiguredForWrite();
     },
 
     hasEncryptionKey() { return !!this.config.encKey; },
 
     /** Build standard headers for GitHub API */
     _headers() {
-        return {
-            'Authorization': `Bearer ${this.config.token}`,
+        const headers = {
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
             'X-GitHub-Api-Version': '2022-11-28'
         };
+        if (this.config.token) {
+            headers['Authorization'] = `Bearer ${this.config.token}`;
+        }
+        return headers;
     },
 
     async testConnection() {
@@ -99,7 +125,7 @@ const GitHubAPI = {
     },
 
     async _request(method, body = null) {
-        if (!this.config.token) throw new Error('GitHub token not set.');
+        if (method !== 'GET' && !this.config.token) throw new Error('GitHub token not set for write operation.');
         const cacheBust = method === 'GET' ? `?t=${Date.now()}` : '';
         const url = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${this.config.path}${cacheBust}`;
         const options = { method, headers: this._headers(), cache: 'no-store' };

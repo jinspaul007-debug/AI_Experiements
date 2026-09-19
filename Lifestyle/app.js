@@ -1075,7 +1075,7 @@ async function syncAndLoginWithPin(pin) {
     const profiles = getProfiles();
     const hasAnyProfile = Object.keys(profiles).length > 0;
     
-    if (hasAnyProfile && !GitHubAPI.isConfigured()) {
+    if (hasAnyProfile && !GitHubAPI.isConfiguredForRead()) {
       // Wrong PIN for existing local profiles
       clBtn.textContent = '❌ Incorrect PIN. Try again.';
       clBtn.style.color = 'var(--no)';
@@ -1086,9 +1086,10 @@ async function syncAndLoginWithPin(pin) {
     
     clBtn.textContent = 'Checking Cloud Sync...';
     
-    if (GitHubAPI.isConfigured()) {
+    if (GitHubAPI.isConfiguredForRead()) {
       try {
         GitHubAPI.setPath('Lifestyle/data_' + pinHash + '.enc');
+        // Do not require token here, just set it if we have it
         GitHubAPI.setEncryptionKey(pin);
         
         const data = await GitHubAPI.fetchData();
@@ -1204,9 +1205,57 @@ function saveCloudConfig() {
   toast('✅ GitHub Config Saved — you will be synced on next login');
 }
 
+function generateDeviceLink() {
+  if (!GitHubAPI.isConfiguredForWrite()) {
+    toast('⚠️ Configure Cloud Sync first before generating a link!');
+    return;
+  }
+  const conf = JSON.stringify({
+    token: GitHubAPI.config.token,
+    username: GitHubAPI.config.username,
+    repo: GitHubAPI.config.repo
+  });
+  const link = window.location.origin + window.location.pathname + '?link=' + btoa(conf);
+  
+  // Show it to the user in a modal
+  openMo('📱 Mobile Sync Link', 
+    '<p style="font-size:13px;color:var(--t2);margin-bottom:12px">Copy this link and open it on your mobile device to securely configure cloud sync without typing your token.</p>' +
+    '<input type="text" readonly class="hin wfull" id="syncLinkInput" value="' + link + '" style="margin-bottom:12px">' +
+    '<button class="btn btn-p wfull" onclick="copySyncLink()">Copy Link</button>', 
+    () => closeMo()
+  );
+}
+
+function copySyncLink() {
+  const el = document.getElementById('syncLinkInput');
+  if(el) {
+    el.select();
+    document.execCommand('copy');
+    toast('📋 Link copied to clipboard!');
+    closeMo();
+  }
+}
+
 
 // ── Init ──
 function init() {
+  // Magic Link Interception
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('link')) {
+    try {
+      const decoded = atob(urlParams.get('link'));
+      const conf = JSON.parse(decoded);
+      if (conf.token && conf.username && conf.repo) {
+        GitHubAPI.saveConfig(conf.token, conf.username, conf.repo);
+        // Clear the URL parameter cleanly
+        window.history.replaceState({}, document.title, window.location.pathname);
+        toast('✅ Mobile Sync Configured! Please log in.');
+      }
+    } catch(e) {
+      console.error('Invalid link parameter', e);
+    }
+  }
+
   // Migrate v1 data if present
   if(localStorage.getItem('lc_s') || localStorage.getItem('lc_d')) migrateV1Data();
 

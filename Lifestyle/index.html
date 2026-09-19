@@ -343,11 +343,14 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
       <input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)">
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="btn btn-o btn-s" onclick="expFullBackupFile()">�️ Backup ALL Profiles</button>
+      <button class="btn btn-o btn-s" onclick="expFullBackupFile()">️ Backup ALL Profiles</button>
       <button class="btn btn-o btn-s" onclick="document.getElementById('fullBackupF').click()">♻️ Restore Backup</button>
       <input type="file" id="fullBackupF" accept=".json" style="display:none" onchange="impFullBackupFile(event)">
     </div>
-    <button class="btn btn-no btn-s" onclick="confReset()">�️ Reset This Profile's Data</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-p btn-s" onclick="generateDeviceLink()">📱 Link Mobile Device</button>
+    </div>
+    <button class="btn btn-no btn-s" onclick="confReset()">️ Reset This Profile's Data</button>
   </div>
   <div class="cd"><div class="ct">🔄 Restart Challenge</div>
     <p style="font-size:13px;color:var(--t3);margin-bottom:10px">Start a new challenge. Export current data first!</p>
