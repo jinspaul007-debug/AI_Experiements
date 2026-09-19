@@ -141,10 +141,26 @@ function hashPin(pin) {
 }
 function setPin(pin) {
   if(!activeUser) return;
+  // Re-key data: read with old pinHash, write with new pinHash
+  const oldPinHash = activeUser.pinHash;
+  const uid = activeUser.id;
+  const dataKeys = ['lc_s_','lc_d_','lc_ch_','lc_g_','lc_tt_'];
+  // Read all data with current (old) encryption
+  const cached = {};
+  dataKeys.forEach(prefix => {
+    cached[prefix] = lsGetE(prefix + uid);
+  });
+  // Update PIN
   const profiles = getProfiles();
-  profiles[activeUser.id].pinHash = pin ? hashPin(pin) : null;
-  activeUser.pinHash = profiles[activeUser.id].pinHash;
+  profiles[uid].pinHash = pin ? hashPin(pin) : null;
+  activeUser.pinHash = profiles[uid].pinHash;
   setProfiles(profiles);
+  // Re-write all data with new encryption (or unencrypted if PIN removed)
+  dataKeys.forEach(prefix => {
+    if(cached[prefix] != null) {
+      lsSetE(prefix + uid, cached[prefix]);
+    }
+  });
 }
 function verifyPin(pin) { return activeUser && activeUser.pinHash === hashPin(pin); }
 function hasPin(profile) { return !!(profile && profile.pinHash); }
@@ -154,6 +170,16 @@ function switchProfile(id) {
   if(!profiles[id]) return;
   setActiveUserId(id);
   activeUser = profiles[id];
+  // Reconfigure GitHubAPI for the new profile (B2)
+  if(typeof GitHubAPI !== 'undefined' && GitHubAPI.isConfigured()) {
+    if(activeUser.pinHash) {
+      GitHubAPI.setPath('Lifestyle/data_' + activeUser.pinHash + '.enc');
+      // Note: We can't set the raw PIN here since we only have the hash.
+      // Cloud sync will work on next PIN entry.
+    } else {
+      localStorage.removeItem('lc_cloud_auth');
+    }
+  }
   loadActiveChallenge();
   init();
 }

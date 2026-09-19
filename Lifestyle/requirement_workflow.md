@@ -1,4 +1,4 @@
-# 🧠 AI Context & Workflow Document: Lifestyle Challenge Tracker v3.0
+# 🧠 AI Context & Workflow Document: Lifestyle Challenge Tracker v3.1
 
 > **Instruction for new AI Instance:** Read this document entirely before making any modifications to the codebase. It contains the complete context, user requirements, and architectural decisions made in previous sessions.
 
@@ -8,6 +8,7 @@
 | 1.0 | Apr 2026 | Initial release — 16 hardcoded habits, single user, basic analytics |
 | 2.0 | May 2026 | Multi-user profiles, 6 challenge types, calorie/meal tracking, privacy controls, comparison features, dynamic tracker forms, target-line charts, data edit/delete, v1→v2 migration |
 | 3.0 | May 2026 | Body metrics (height/age/gender/activity), PIN lock per profile, Health Tools (BMI, TDEE/maintenance, calorie burn, weight-loss planner), Goal engine with projection (plan vs actual pace), goal progress visualizations, custom challenge (free duration + date-range + goal weight), custom habit/category builder, professional UI redesign with smooth transitions, full multi-profile backup/restore, projection charts, USER_GUIDE.md |
+| 3.1 | Sep 2026 | **Bug-fix & UX release**: 20+ bugs fixed across sync, accounts, selection, progress. Removed duplicate `renderToolsPage` (tools.js wins), removed duplicate `showExtendChallengeMo`. Fixed PIN removal data loss (re-key on PIN change). Fixed import to use encrypted storage. Fixed mood/day-type selection (data-selected instead of fragile CSS). Fixed progress ring, overall progress counting rest/cheat/sick days. Enhanced Edit Habits modal with custom habit creation. Added `addManualEntry()` for quick data logging. Profile name uniqueness check. Compare chart render timing fix. curDate preserved across page reloads. Cloud sync profile switch fix. Service worker cache bumped to v8. |
 
 ## v3.0 Detailed Requirements
 
@@ -91,6 +92,25 @@ Create a world-class, production-quality lifestyle challenge tracker built as a 
 - **Issue:** No date boundary checks. **Fix:** `chgDate()` enforces challenge date range.
 - **Issue:** Can't delete day data. **Fix:** `delDay()` with confirmation modal.
 - **Issue:** Personal/company references. **Fix:** All sanitized — no personal names, no corporate data.
+
+## 🔍 Deep Review & Fixed Issues (v3.1)
+- **Issue:** Duplicate `renderToolsPage()` in both tools.js and app.js — app.js version silently overwrote the full Health Tools. **Fix:** Removed duplicate from app.js; tools.js is the source of truth.
+- **Issue:** Duplicate `showExtendChallengeMo()` — legacy prompt-based version overwrote modal version. **Fix:** Removed legacy version.
+- **Issue:** PIN removal destroyed encrypted data. **Fix:** `setPin()` now re-reads all data with old key, then re-writes with new key (or unencrypted).
+- **Issue:** Import JSON bypassed encryption. **Fix:** `impJSON()` now uses `setS()` and `lsSetE()` instead of raw `localStorage.setItem()`.
+- **Issue:** Cloud sync encryption key mismatch (raw PIN vs pinHash). **Fix:** Standardized via `syncAndLoginWithPin()`.
+- **Issue:** Mood selection in `saveDay()` used fragile CSS style matching. **Fix:** Uses `data-selected` attribute.
+- **Issue:** Day type selection used fragile CSS matching. **Fix:** Uses `data-selected` attribute.
+- **Issue:** Overall progress ignored rest/cheat/sick days. **Fix:** Now counts them as completed participation.
+- **Issue:** Badge text set twice in `refreshDash()`. **Fix:** Removed duplicate assignment.
+- **Issue:** Compare chart rendered before DOM. **Fix:** `setTimeout` moved after `el.innerHTML`.
+- **Issue:** Profile switch didn't reconfigure GitHubAPI. **Fix:** `switchProfile()` now updates API path/key.
+- **Issue:** Progress ring HTML had static `stroke-dasharray/offset`. **Fix:** JS sets both dynamically.
+- **Issue:** `curDate` reset to today on every `proceedInit()`. **Fix:** Only resets if outside challenge range.
+- **Issue:** No custom habit addition to active challenge. **Fix:** Edit Habits modal now has "+ Add" for custom habits.
+- **Issue:** No manual data entry. **Fix:** Added `addManualEntry()` function.
+- **Issue:** Profile creation sent to Tools page with no data. **Fix:** Now goes to Challenge page.
+- **Issue:** No profile name uniqueness check. **Fix:** Added validation in `doCreateProfile()`.
 
 ## 🚀 Next Steps / Pending Tasks for AI
 1. **Custom Habit Creation UI:** Allow users to add/remove custom habits from the challenge.

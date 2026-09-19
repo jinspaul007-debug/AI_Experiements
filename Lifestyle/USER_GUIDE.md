@@ -1,4 +1,4 @@
-# 📖 User Guide — Lifestyle Challenge Tracker v3.0
+# 📖 User Guide — Lifestyle Challenge Tracker v3.1
 
 A step-by-step guide to using every feature. The app is 100% local (your data never leaves your device) and works offline once loaded.
 
@@ -6,8 +6,8 @@ A step-by-step guide to using every feature. The app is 100% local (your data ne
 
 ## 1. First Launch — Create Your Profile
 1. On first open you land on the **Profile** page.
-2. Pick an **avatar**, type your **name**, tap **🚀 Create Profile**.
-3. You're taken to the **Challenge** page to start your first challenge.
+2. Pick an **avatar**, type your **name**, and create a **4-digit PIN** (required).
+3. Tap **🚀 Create Profile** — you’re taken to the **Challenge** page to start your first challenge.
 
 > Multiple people can use the same device — each gets a separate profile with isolated data.
 
@@ -32,6 +32,13 @@ A step-by-step guide to using every feature. The app is 100% local (your data ne
 3. Tick habits, fill in numbers (water, sleep, steps, weight…), pick a **day type**, set **mood/energy**, add **notes**.
 4. For calorie/weight challenges, log **meals** (name + kcal + type) — daily total vs target shows automatically.
 5. Tap **💾 Save Day**. To clear a day, tap **🗑️**.
+
+### Edit Tracked Habits
+- On the Track page, tap **📝 Edit Tracked Habits** to add/remove habits from your challenge.
+- You can also **create custom habits** (e.g. "Meditate", "Journal") right inside the edit modal — type a name and tap **+ Add**.
+
+### Manual Entry
+- Use the `addManualEntry(field, value)` function in the console to quickly log any metric for the current day without going through the full form.
 
 ---
 
@@ -100,3 +107,5 @@ Generate A4-ready weekly sheets or a full report — use your browser's Print �
 - Works on Chrome, Edge, and iPhone 12 Safari.
 - Switch **Dark/Light** mode in Settings.
 - All data is stored in your browser only — clearing browser data erases it, so keep backups.
+- Rest, Cheat, and Sick days count toward your overall progress percentage.
+- Your tracked day position is preserved when switching pages — it won’t reset to today unless outside the challenge range.

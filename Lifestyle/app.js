@@ -91,14 +91,18 @@ function loadForm(ds) {
   });
 
   document.querySelectorAll('.dtb').forEach(b=>{
-    b.style.background=(dd.dayType===b.dataset.t)?'var(--ac)':'';
-    b.style.color=(dd.dayType===b.dataset.t)?'#fff':'';
+    const isActive = (dd.dayType===b.dataset.t);
+    b.style.background = isActive ? 'var(--ac)' : '';
+    b.style.color = isActive ? '#fff' : '';
+    if(isActive) b.dataset.selected = '1'; else delete b.dataset.selected;
   });
 
   const mood=dd.mood||0;
   document.querySelectorAll('.mb').forEach(m=>{
     const v=parseInt(m.dataset.v)||0;
-    m.style.opacity=(v===mood)?'1':'0.4';
+    const isSelected = (v===mood);
+    m.style.opacity = isSelected ? '1' : '0.4';
+    if(isSelected) m.dataset.selected = '1'; else delete m.dataset.selected;
   });
 
   // Load meals
@@ -113,13 +117,15 @@ function tglH(cb) {
 }
 
 function setDT(type,btn) {
-  document.querySelectorAll('.dtb').forEach(b=>{ b.style.background=''; b.style.color=''; });
+  document.querySelectorAll('.dtb').forEach(b=>{ b.style.background=''; b.style.color=''; delete b.dataset.selected; });
   btn.style.background='var(--ac)'; btn.style.color='#fff';
+  btn.dataset.selected = '1';
 }
 
 function setM(val,el) {
-  document.querySelectorAll('.mb').forEach(m=>m.style.opacity='0.4');
+  document.querySelectorAll('.mb').forEach(m=>{ m.style.opacity='0.4'; delete m.dataset.selected; });
   el.style.opacity='1';
+  el.dataset.selected = '1';
 }
 
 // ── Dynamic Tracker Form Builder ──
@@ -243,10 +249,10 @@ function saveDay() {
     else dd[f]=el.value||null;
   });
 
-  const at=document.querySelector('.dtb[style*="var(--ac)"]');
+  const at=document.querySelector('.dtb[data-selected="1"]');
   dd.dayType=at?at.dataset.t:'normal';
 
-  const am=document.querySelector('.mb[style*="opacity: 1"]')||document.querySelector('.mb[style*="opacity:1"]');
+  const am=document.querySelector('.mb[data-selected="1"]');
   if(am) dd.mood=parseInt(am.dataset.v)||3;
 
   if(dayMeals.length) dd.meals = [...dayMeals];
@@ -304,13 +310,13 @@ function refreshDash() {
   if(qMl) qMl.textContent = '"' + q.ml + '"';
 
   const chEmoji = activeChallenge ? (CHALLENGE_TYPES[activeChallenge.type]||{emoji:'🔥'}).emoji : '🔥';
-  document.getElementById('bdgT').textContent=chEmoji+' Day '+cap+' of '+s.duration;
+  // Badge text already set above — no duplicate needed here
 
   let done=0, cStrk=0, bStrk=0, tmp=0;
   for(let i=0;i<cap;i++){
     const ds=addD(s.startDate,i), dd=ad[ds];
     if(dd&&dd.score>=50){ done++; tmp++; bStrk=Math.max(bStrk,tmp); }
-    else if(dd&&(dd.dayType==='rest'||dd.dayType==='cheat'||dd.dayType==='sick')){ tmp++; bStrk=Math.max(bStrk,tmp); }
+    else if(dd&&(dd.dayType==='rest'||dd.dayType==='cheat'||dd.dayType==='sick')){ done++; tmp++; bStrk=Math.max(bStrk,tmp); }
     else tmp=0;
   }
   for(let i=cap-1;i>=0;i--){
@@ -569,8 +575,14 @@ function impJSON(ev) {
         toast('✅ Shared data imported from '+d.userName);
         return;
       }
-      if(d.settings && activeUser) localStorage.setItem('lc_s_'+activeUser.id,JSON.stringify(d.settings));
-      if(d.days && activeUser) localStorage.setItem('lc_d_'+activeUser.id,JSON.stringify(d.days));
+      if(d.settings && activeUser) setS(d.settings);
+      if(d.days && activeUser) {
+        // Import each day through the encrypted setter
+        const existing = allD();
+        Object.keys(d.days).forEach(ds => existing[ds] = d.days[ds]);
+        lsSetE('lc_d_'+activeUser.id, existing);
+        triggerSync();
+      }
       toast('✅ Data imported!'); init();
     }catch(err){ toast('❌ Invalid: '+err.message); }
   };
@@ -648,6 +660,10 @@ function doCreateProfile() {
   const pin = document.getElementById('newProfPin').value.trim();
   if(!name) { toast('⚠️ Enter your name'); return; }
   if(!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { toast('⚠️ PIN must be exactly 4 digits (e.g. 1234)'); return; }
+  // Validate name uniqueness (B3)
+  const existingProfiles = getProfiles();
+  const nameExists = Object.values(existingProfiles).some(p => p.name.toLowerCase() === name.toLowerCase());
+  if(nameExists) { toast('⚠️ A profile with this name already exists'); return; }
   const avEl = document.querySelector('#avatarPick span[data-selected="1"]');
   const avatar = avEl ? avEl.dataset.av : '🦊';
   createProfile(name, avatar);
@@ -659,7 +675,8 @@ function doCreateProfile() {
     GitHubAPI.setEncryptionKey(pin);
     localStorage.setItem('lc_cloud_auth', '1');
   }
-  showPg('pgTools'); // Go to Health Tools next
+  // Go to Challenge setup next (B1 — tools page has no data yet)
+  showPg('pgChallenge');
 }
 function confirmDelProfile(id) {
   const profiles = getProfiles();
@@ -823,30 +840,9 @@ function switchChallenge(chId) {
   renderChallenges();
 }
 
-function showExtendChallengeMo() {
-  const s = getS();
-  openMo('Extend Challenge', 'Increase duration of active challenge (current: '+s.duration+' days). How many days total?', () => {
-    const val = prompt('Enter new total duration (e.g. 150):', s.duration);
-    if(val) {
-      const p = parseInt(val);
-      if(p > s.duration) {
-        s.duration = p;
-        if(activeChallenge) activeChallenge.duration = p;
-        setS(s);
-        const chs = getChallenges();
-        const ci = chs.findIndex(c => c.id === activeChallenge.id);
-        if(ci>=0) { chs[ci].duration = p; setChallenges(chs); }
-        toast('✅ Challenge extended to ' + p + ' days');
-        renderChallenges();
-        closeMo();
-      } else {
-        toast('⚠️ New duration must be greater than current');
-      }
-    }
-  });
-}
 
 // showEditHabitsMo is defined below (the proper modal version)
+// showExtendChallengeMo is defined below (the proper modal version)
 
 // ── Comparison Page ──
 function renderCompare() {
@@ -881,9 +877,10 @@ function renderCompare() {
     });
     html += '<div class="chc"><canvas id="cCompare"></canvas></div>';
     html += '</div>';
-    setTimeout(renderCompareChart, 100);
+    // Render chart AFTER innerHTML is set
   }
   el.innerHTML = html;
+  if(shared.length) setTimeout(renderCompareChart, 100);
 }
 function removeShared(idx) { const s=getSharedData(); s.splice(idx,1); setSharedData(s); renderCompare(); }
 
@@ -1260,7 +1257,12 @@ function proceedInit() {
   document.body.dataset.theme=s.theme;
   const themeEl = document.getElementById('tTheme');
   if(themeEl) themeEl.classList.toggle('on',s.theme==='dark');
-  curDate=todayStr();
+  // Only reset curDate to today if it's outside the challenge range (F5)
+  const end = addD(s.startDate, s.duration - 1);
+  const today = todayStr();
+  if(!curDate || curDate < s.startDate || curDate > end) {
+    curDate = today > end ? end : (today < s.startDate ? s.startDate : today);
+  }
 
   // Update header badges
   const bdgT = document.getElementById('bdgT');
@@ -1378,132 +1380,8 @@ function deleteTimetableSlot(idx) {
   toast('🗑️ Block removed');
 }
 
-// ── Health Tools Logic ──
-function renderToolsPage() {
-  const el = document.getElementById('toolsContent');
-  if(!el) return;
-  const s = getS();
-  
-  // Create UI
-  let html = `
-  <div class="cd">
-    <div class="ct">🧮 BMI & Calories Calculator</div>
-    <p style="font-size:13px;color:var(--t3);margin-bottom:14px">Calculate your body metrics and daily energy expenditure to set accurate goals.</p>
-    
-    <div class="sgrid" style="margin-bottom:14px">
-      <div class="fld"><label>Weight (kg)</label><input type="number" id="htW" class="hin" value="${s.weight||70}"></div>
-      <div class="fld"><label>Height (cm)</label><input type="number" id="htH" class="hin" value="170"></div>
-    </div>
-    <div class="sgrid" style="margin-bottom:14px">
-      <div class="fld"><label>Age</label><input type="number" id="htA" class="hin" value="30"></div>
-      <div class="fld"><label>Gender</label><select id="htG" class="hin"><option value="m">Male</option><option value="f">Female</option></select></div>
-    </div>
-    <div class="fld" style="margin-bottom:16px">
-      <label>Activity Level</label>
-      <select id="htAct" class="hin">
-        <option value="1.2">Sedentary (Little to no exercise)</option>
-        <option value="1.375">Lightly Active (1-3 days/week)</option>
-        <option value="1.55" selected>Moderately Active (3-5 days/week)</option>
-        <option value="1.725">Very Active (6-7 days/week)</option>
-        <option value="1.9">Extra Active (Physical job/training)</option>
-      </select>
-    </div>
-    <div class="fld" style="margin-bottom:16px">
-      <label>Goal Type</label>
-      <select id="htGType" class="hin">
-        <option value="-500">Weight Loss (Lose ~0.5kg/week)</option>
-        <option value="0" selected>Maintenance (Keep current weight)</option>
-        <option value="500">Muscle Gain (Gain ~0.5kg/week)</option>
-      </select>
-    </div>
-    
-    <button class="btn btn-p btn-bl" onclick="calcHealth()">Calculate Metrics</button>
-  </div>
-  
-  <div class="cd" id="htResults" style="display:none">
-    <div class="ct">📊 Your Results</div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
-      <span style="color:var(--t2)">BMI:</span> <strong id="htResBMI" style="color:var(--ac)">--</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
-      <span style="color:var(--t2)">BMR (Base Cal):</span> <strong id="htResBMR">--</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:8px">
-      <span style="color:var(--t2)">TDEE (Daily Burn):</span> <strong id="htResTDEE">--</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-      <span style="color:var(--t2);font-weight:600">Goal Calories:</span> <strong id="htResGoal" style="color:var(--ok);font-size:16px">-- kcal/day</strong>
-    </div>
-    
-    <div class="fld" style="margin-bottom:14px">
-      <label>Set Target Weight (kg)</label>
-      <input type="number" id="htTgtW" class="hin" value="${s.tgtW||''}" placeholder="e.g. 65">
-    </div>
-    <p style="font-size:11px;color:var(--t3);margin-bottom:10px;text-align:center">This will sync your daily tracker and graphs with these new target goals.</p>
-    <button class="btn btn-ok btn-bl" onclick="saveHealthGoals()">Add to Goals & Sync</button>
-  </div>
-  `;
-  el.innerHTML = html;
-}
-
-function calcHealth() {
-  const w = parseFloat(document.getElementById('htW').value);
-  const h = parseFloat(document.getElementById('htH').value);
-  const a = parseInt(document.getElementById('htA').value);
-  const g = document.getElementById('htG').value;
-  const act = parseFloat(document.getElementById('htAct').value);
-  const gtype = parseInt(document.getElementById('htGType').value);
-  
-  if(!w || !h || !a) { toast('⚠️ Please fill out all fields'); return; }
-  
-  // BMI
-  const bmi = (w / ((h/100)*(h/100))).toFixed(1);
-  let bmiCat = '';
-  if(bmi < 18.5) bmiCat = '(Underweight)';
-  else if(bmi < 25) bmiCat = '(Normal)';
-  else if(bmi < 30) bmiCat = '(Overweight)';
-  else bmiCat = '(Obese)';
-  
-  // BMR (Mifflin-St Jeor)
-  let bmr = (10 * w) + (6.25 * h) - (5 * a);
-  if(g === 'm') bmr += 5;
-  else bmr -= 161;
-  
-  // TDEE
-  const tdee = Math.round(bmr * act);
-  
-  // Goal
-  const goalCal = tdee + gtype;
-  
-  document.getElementById('htResBMI').textContent = bmi + ' ' + bmiCat;
-  document.getElementById('htResBMR').textContent = Math.round(bmr) + ' kcal';
-  document.getElementById('htResTDEE').textContent = tdee + ' kcal';
-  document.getElementById('htResGoal').textContent = goalCal + ' kcal/day';
-  
-  // Cache for saving
-  window.lastCalcCal = goalCal;
-  window.lastCalcW = w;
-  
-  document.getElementById('htResults').style.display = 'block';
-  document.getElementById('htResults').scrollIntoView({behavior:'smooth'});
-}
-
-function saveHealthGoals() {
-  const tgtW = parseFloat(document.getElementById('htTgtW').value);
-  if(!tgtW) { toast('⚠️ Please enter a Target Weight'); return; }
-  
-  const s = getS();
-  s.weight = window.lastCalcW || s.weight;
-  s.tgtW = tgtW;
-  s.tgtCal = window.lastCalcCal || s.tgtCal;
-  setS(s);
-  
-  toast('✅ Goals synced to Tracker & Analytics!');
-  if(!getChallenges().length) setTimeout(() => showPg('pgChallenge'), 500);
-  else setTimeout(() => showPg('pgDash'), 1000);
-}
-
 // ── Analytics Page ── (full implementation is in analytics.js)
+// NOTE: renderToolsPage, calcBMI, doTDEE, doBurn, doPlan are all in tools.js
 
 // ── Extend Challenge ──
 function showExtendChallengeMo() {
@@ -1525,13 +1403,15 @@ function doExtendChallenge() {
   refreshDash();
 }
 
-// ── Edit Active Habits ──
+// ── Edit Active Habits (E2 — enhanced with custom habits) ──
 function showEditHabitsMo() {
   const el = document.getElementById('editHabitsList');
-  if(!el || !activeChallenge) return;
+  if(!el || !activeChallenge) { toast('⚠️ No active challenge'); return; }
   const currentHabits = activeChallenge.habits || [];
+  const customDefs = activeChallenge.customHabitDefs || [];
   let html = '';
   
+  // Show default habits grouped
   Object.keys(HABIT_GROUPS).forEach(gk => {
     const gInfo = HABIT_GROUPS[gk];
     const groupHabits = DEFAULT_HABITS.filter(h => (h.group||'custom') === gk);
@@ -1547,8 +1427,55 @@ function showEditHabitsMo() {
     }
   });
   
+  // Show existing custom habits from this challenge
+  if(customDefs.length > 0) {
+    html += '<div style="font-weight:700;margin-top:10px;margin-bottom:6px">✏️ Your Custom Habits</div>';
+    customDefs.forEach(h => {
+      const isChecked = currentHabits.includes(h.id);
+      html += `<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer">
+        <input type="checkbox" value="${h.id}" class="edit-habit-cb" data-custom="1" ${isChecked ? 'checked' : ''}>
+        <span>${h.emoji} ${h.name}</span>
+      </label>`;
+    });
+  }
+  
+  // Add custom habit input (E2)
+  html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)">';
+  html += '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">Add a new custom habit:</div>';
+  html += '<div style="display:flex;gap:6px">';
+  html += '<input type="text" class="hin wfull" id="editNewHabitName" placeholder="e.g. Meditate, Journal...">';
+  html += '<button class="btn btn-o btn-s" onclick="addHabitInModal()">+ Add</button>';
+  html += '</div></div>';
+  
   el.innerHTML = html;
   document.getElementById('editHabitsMo').classList.add('show');
+}
+
+function addHabitInModal() {
+  const nameInput = document.getElementById('editNewHabitName');
+  if(!nameInput) return;
+  const name = nameInput.value.trim();
+  if(!name) { toast('⚠️ Enter a habit name'); return; }
+  
+  const id = 'cust_' + Date.now().toString(36);
+  const newDef = { id, name, emoji: '✏️', group: 'custom' };
+  
+  // Add to the active challenge's custom defs temporarily
+  if(!activeChallenge.customHabitDefs) activeChallenge.customHabitDefs = [];
+  activeChallenge.customHabitDefs.push(newDef);
+  
+  // Add checkbox to the list
+  const el = document.getElementById('editHabitsList');
+  const addSection = el.querySelector('div[style*="border-top"]');
+  if(addSection) {
+    const label = document.createElement('label');
+    label.style = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer';
+    label.innerHTML = `<input type="checkbox" value="${id}" class="edit-habit-cb" data-custom="1" checked> <span>✏️ ${name}</span>`;
+    el.insertBefore(label, addSection);
+  }
+  
+  nameInput.value = '';
+  toast('✅ Custom habit added: ' + name);
 }
 
 function doSaveHabits() {
@@ -1557,10 +1484,28 @@ function doSaveHabits() {
   const newHabits = Array.from(cbs).map(cb => cb.value);
   if(newHabits.length === 0) { toast('⚠️ Select at least one habit'); return; }
   
+  // Collect custom habit definitions that are checked
+  const customCbs = document.querySelectorAll('.edit-habit-cb[data-custom="1"]:checked');
+  const customIds = Array.from(customCbs).map(cb => cb.value);
+  
   const chs = getChallenges();
   const ch = chs.find(c => c.id === activeChallenge.id);
   if(ch) { 
-    ch.habits = newHabits; 
+    ch.habits = newHabits;
+    // Preserve custom habit definitions that are still selected
+    if(ch.customHabitDefs) {
+      ch.customHabitDefs = ch.customHabitDefs.filter(d => customIds.includes(d.id));
+    } else {
+      ch.customHabitDefs = [];
+    }
+    // Also merge any new defs from activeChallenge (added during this modal session)
+    if(activeChallenge.customHabitDefs) {
+      activeChallenge.customHabitDefs.forEach(d => {
+        if(customIds.includes(d.id) && !ch.customHabitDefs.find(x => x.id === d.id)) {
+          ch.customHabitDefs.push(d);
+        }
+      });
+    }
     setChallenges(chs); 
     activeChallenge = ch; 
   }
@@ -1569,6 +1514,25 @@ function doSaveHabits() {
   toast('✅ Habits updated!');
   buildTrackerForm();
   loadForm(curDate);
+}
+
+// ── Manual Entry / Quick Log (E1) ──
+function addManualEntry(field, value) {
+  if(!activeUser) return;
+  const dd = getDD(curDate);
+  if(field === 'weightMorning' || field === 'weightNight' || field === 'waterLitres' || 
+     field === 'sleepHours' || field === 'steps' || field === 'calories' || 
+     field === 'studyMins' || field === 'exerciseMins' || field === 'readPages' ||
+     field === 'proteinGrams' || field === 'commMins' || field === 'yogaMins') {
+    dd[field] = parseFloat(value) || null;
+  } else if(field === 'notes') {
+    dd[field] = value || '';
+  } else {
+    dd[field] = value;
+  }
+  dd.ts = dd.ts || new Date().toISOString();
+  setDD(curDate, dd);
+  toast('✅ ' + field + ' updated');
 }
 
 document.addEventListener('DOMContentLoaded', init);

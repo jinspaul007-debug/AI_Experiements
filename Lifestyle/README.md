@@ -1,7 +1,7 @@
-# Lifestyle Challenge Tracker v2.0
+# Lifestyle Challenge Tracker v3.1
 
-**Version:** 2.0  
-**Created:** April 2026 | **Updated:** May 2026  
+**Version:** 3.1  
+**Created:** April 2026 | **Updated:** September 2026  
 **Platform:** Progressive Web App (PWA) — Works on iPhone, Android, Windows, macOS, any browser  
 **License:** Open-source — 100% local, zero cloud, zero tracking  
 
@@ -13,6 +13,8 @@
 |---------|------|---------|
 | 1.0 | Apr 2026 | Initial release — 16 habits, single user, basic analytics |
 | 2.0 | May 2026 | Multi-user profiles, 6 challenge types, calorie/meal tracking, privacy controls, comparison, custom habits, target-line charts, data edit/delete, dynamic tracker forms, enhanced UI |
+| 3.0 | May 2026 | Body metrics, PIN lock, Health Tools (BMI, TDEE, burn, planner), Goal engine, projection charts, custom challenges, full backup/restore |
+| 3.1 | Sep 2026 | 20+ bug fixes (sync, accounts, selection, progress), custom habit creation in-modal, manual data entry, PIN re-key on change, encryption-safe import |
 
 ---
 
@@ -263,6 +265,21 @@ python -m http.server 8080
 ---
 
 ## 📝 Changelog
+
+### v3.1 — September 2026
+- **20+ bug fixes** across sync, accounts, selection, progress tracking
+- **Removed duplicate functions**: `renderToolsPage` (tools.js is source of truth), `showExtendChallengeMo` (legacy prompt version removed)
+- **PIN re-keying**: Changing or removing PIN now re-encrypts all data; prevents data loss
+- **Encrypted import**: `impJSON()` uses encrypted storage setters instead of raw localStorage
+- **Reliable selection**: Mood and day-type detection uses `data-selected` attributes instead of fragile CSS style matching
+- **Progress accuracy**: Rest/cheat/sick days now count toward overall progress percentage
+- **Custom habits**: Edit Habits modal now supports creating custom habits with "+ Add" button
+- **Manual entry**: `addManualEntry()` function for quick data logging
+- **Profile fixes**: Name uniqueness validation, creation redirects to Challenge page, switch reconfigures cloud sync
+- **Compare chart**: Renders after DOM is ready (was rendering before innerHTML)
+- **curDate preserved**: Day position no longer resets to today on page switches
+- **Progress ring**: Static HTML attributes removed; JS sets both dasharray and dashoffset dynamically
+- **Service worker**: Cache bumped to `life101-v8`
 
 ### v3.0 — May 2026
 - **Body metrics** in profile: height, age, gender, activity level, start/goal weight
