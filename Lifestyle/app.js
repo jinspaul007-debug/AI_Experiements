@@ -634,6 +634,13 @@ function renderProfilePage() {
       html += '</div>';
     });
     html += '</div>';
+  } else {
+    // If no profiles exist, show the cloud login option for returning users
+    html += '<div class="cd" style="text-align:center; border:1px solid var(--ac)">';
+    html += '<div class="ct" style="justify-content:center">☁️ Existing Cloud User?</div>';
+    html += '<p style="font-size:12px;color:var(--t3);margin-bottom:12px">If you already have a profile synced to the cloud, you can restore it instantly using your PIN.</p>';
+    html += '<button class="btn btn-o wfull" style="border-color:var(--ac);color:var(--ac)" onclick="showCloudLogin()">Log In with PIN</button>';
+    html += '</div>';
   }
   html += '<div class="cd"><div class="ct">➕ New Profile</div>';
   html += '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap" id="avatarPick">';
@@ -649,6 +656,11 @@ function renderProfilePage() {
   // Mark first avatar as selected by default
   const firstAv = el.querySelector('#avatarPick span');
   if(firstAv) firstAv.dataset.selected = '1';
+}
+function showCloudLogin() {
+  document.getElementById('app').innerHTML = '';
+  document.getElementById('lockScreen').classList.add('show');
+  document.getElementById('lockMsg').textContent = 'Enter PIN to fetch cloud profile';
 }
 function pickAvatar(el) {
   document.querySelectorAll('#avatarPick span').forEach(s=>{ s.style.opacity='0.4'; delete s.dataset.selected; });
